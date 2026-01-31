@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LINE 貼圖整理器（上架）｜步驟２</title>
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- Page2 補充樣式（不影響 Page1） -->
+  <style>
+    .grid2 { display:grid; grid-template-columns: 1.2fr .8fr; gap: 14px; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .canvas-wrap{
+      position: relative;
+      border-radius: var(--r);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .canvas-stack{
+      position: relative;
+      width: 100%;
+      aspect-ratio: 2560 / 1664; /* 預設 5×4，會由 JS 動態覆蓋 */
+      display:block;
+    }
+    canvas.preview{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+    }
+    canvas.overlay{
+      pointer-events:none;
+      opacity:.9;
+    }
+
+    .kv { display:flex; gap:10px; flex-wrap:wrap; }
+    .kv > div{ padding:8px 10px; border:1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.04); color: var(--muted); font-weight:900; }
+
+    .range-row{ display:grid; grid-template-columns: 110px 1fr 70px; gap:10px; align-items:center; margin-top:10px; }
+    .range-row input[type=range]{ width:100%; }
+    .range-row .val{ text-align:right; color: var(--muted); font-weight:900; }
+
+    .thumb-grid{
+      display:grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 980px){ .thumb-grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @media (max-width: 720px){ .thumb-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 520px){ .thumb-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    .thumb{
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(255,255,255,.03);
+      overflow:hidden;
+    }
+    .thumb .img{
+      background: conic-gradient(from 45deg, rgba(255,255,255,.06), rgba(0,0,0,.06));
+      border-bottom: 1px solid var(--border);
+      aspect-ratio: 1 / 1;
+      display:grid; place-items:center;
+    }
+    .thumb canvas{ width:100%; height:100%; object-fit:contain; }
+    .thumb .meta{ padding:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .badge{
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .picker{ display:flex; gap:8px; }
+    .picker .btn{ padding: 8px 10px; border-radius: 12px; }
+    .picker .btn.is-on{
+      border-color: rgba(34,197,94,.55);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.10);
+    }
+
+    .two{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    @media (max-width: 980px){ .two{ grid-template-columns: 1fr; } }
+
+    .notice{
+      padding: 12px 14px;
+      border-radius: var(--r);
+      /* border: 1px solid rgba(255,255,255,.10); */
+      /* background: rgba(34,197,94,.06); */
+      color: var(--muted);
+      font-size: 1em;
+      line-height: 1.5;
+    }
+    .notice b{ color: rgba(255,255,255,.9); }
+
+    details summary{
+      list-style: none;
+      user-select: none;
+    }
+    details summary::-webkit-details-marker{ display:none; }
+    details summary:before{
+      content:"▶";
+      display:inline-block;
+      margin-right:8px;
+      color: rgba(255,255,255,.5);
+    }
+    details[open] summary:before{ content:"▼"; }
+  </style>
+
+  <!-- ZIP 產生 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><img src="./icon_line.svg" alt="" width="50"></div>
+      <div class="brand-text">
+        <div class="brand-title">LINE 貼圖上架整理<span class="pill">步驟2</span></div>
+        <div class="brand-sub"><span class="pill">說明：</span>上傳大圖 → 切割 → 白底去背 → 命名 / Main / Tab → 下載 ZIP</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <a class="btn ghost" href="./index.html">回到【LINE 貼圖 Prompt 生成器】頁面</a>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- 0. 說明 -->
+    <section class="card">
+      <div class="card-hd">
+        <!-- <h2>使用提醒</h2> -->
+        <!-- <p class="muted">這頁不做 AI 生圖，只做「上架整理」。切割採等分＋你微調（最穩）。</p> -->
+      </div>
+      <div class="card-bd">
+        <div class="notice">
+          <b>請用白色或接近白色背景貼圖</b>（利於去背）並保留每格四邊留白（約 10px 安全邊距）。<br/>
+          本工具固定輸出「一般貼圖」：貼圖 ≤ 370×320、main 240×240、tab 96×74、PNG。
+        </div>
+      </div>
+    </section>
+
+    <div class="grid2">
+      <!-- 左：上傳 + 預覽 + 切割 -->
+      <section class="card">
+        <div class="card-hd">
+          <h2>1) 上傳大圖與切割預覽</h2>
+          <p class="muted">上傳 Gemini 生成的大圖，再用 X/Y/縮放微調對位，確認格線對齊後切割。</p>
+        </div>
+
+        <div class="card-bd">
+          <div class="actions">
+            <button class="btn ghost" id="btnPick2" type="button">選擇大圖</button>
+            <input id="fileBig" type="file" accept="image/*" style="display:none" />
+            <button class="btn" id="btnReset" type="button" disabled>重置對位</button>
+          </div>
+
+          <div class="block" style="margin-top:12px;">
+            <div class="block-title">切割模式</div>
+            <div class="seg" id="gridSeg">
+              <button class="segbtn is-on" data-grid="5x4" type="button">5×4（20張）</button>
+              <button class="segbtn" data-grid="3x3" type="button">3×3（9張）</button>
+            </div>
+            <div class="hint muted small" id="gridHint"></div>
+          </div>
+
+          <div class="block" style="margin-top:12px;">
+            <div class="block-title">預覽（格線僅引導，不會寫入圖片）</div>
+            <div class="canvas-wrap">
+              <div class="canvas-stack" id="previewStack">
+                <canvas id="cPreview" class="preview"></canvas>
+                <canvas id="cOverlay" class="preview overlay"></canvas>
+              </div>
+            </div>
+            <div class="kv" style="margin-top:10px;">
+              <div id="imgInfo">尚未上傳</div>
+              <div id="cellInfo">—</div>
+            </div>
+
+            <div class="range-row">
+              <div class="muted">水平平移 (X)</div>
+              <input id="rx" type="range" min="-100" max="100" value="0" />
+              <div class="val" id="vx">0%</div>
+            </div>
+            <div class="range-row">
+              <div class="muted">垂直平移 (Y)</div>
+              <input id="ry" type="range" min="-100" max="100" value="0" />
+              <div class="val" id="vy">0%</div>
+            </div>
+            <div class="range-row">
+              <div class="muted">縮放</div>
+              <input id="rs" type="range" min="50" max="150" value="100" />
+              <div class="val" id="vs">100%</div>
+            </div>
+          </div>
+
+          <div class="actions" style="margin-top:14px;">
+            <button class="btn primary" id="btnSlice" type="button" disabled>2) 開始切割</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右：去背 + 命名 + 輸出 -->
+      <section class="card">
+        <div class="card-hd">
+          <h2>2) 白底去背與輸出設定</h2>
+          <p class="muted">本工具固定白底去背＋一般貼圖規格輸出，避免選項過多造成誤用。</p>
+        </div>
+
+        <div class="card-bd">
+          <div class="block">
+            <div class="block-title">去背（白底）</div>
+            <div class="notice" style="margin-top:10px;">
+              本工具僅採用 <b>白底去背</b>：將接近白色的背景像素轉為透明 PNG。<br/>
+              請用純白背景、無漸層、無陰影生圖，去背效果最穩。
+            </div>
+
+            <details style="margin-top:12px;">
+              <summary class="muted" style="cursor:pointer;">進階設定（去背容差）</summary>
+
+              <div class="range-row" style="margin-top:10px;">
+                <div class="muted">容差</div>
+                <input id="rt" type="range" min="0" max="80" value="24" />
+                <div class="val" id="vt">24</div>
+              </div>
+
+              <div class="muted small" style="margin-top:6px;">
+                建議 18～30。數值越大去背越強，但可能吃到角色白色細節（例如眼白、白邊）。
+              </div>
+            </details>
+          </div>
+
+          <div class="block" style="margin-top:12px;">
+            <div class="block-title">命名 / 編號</div>
+            <div class="field">
+              <label>起始編號（第二組可填 21）</label>
+              <input id="startNo" class="input" value="1" />
+            </div>
+
+            <div class="muted small" style="margin-top:10px;">
+              輸出固定：一般貼圖 ≤ 370×320、main.png 240×240、tab.png 96×74
+            </div>
+          </div>
+
+          <div class="actions" style="margin-top:14px;">
+            <button class="btn" id="btnProcess" type="button" disabled>3) 執行去背與輸出預覽</button>
+          </div>
+
+          <div class="actions" style="margin-top:12px;">
+            <button class="btn primary" id="btnZip" type="button" disabled>4) 下載完整 ZIP</button>
+          </div>
+
+          <div class="muted small" style="margin-top:10px;">
+            ZIP 內容：01.png…（或從起始編號開始）、main.png、tab.png、README.txt
+          </div>
+
+          <div class="block" style="margin-top:14px;">
+  <div class="block-title">5) 前往 LINE Creators Market 上傳</div>
+
+  <div class="actions" style="margin-top:10px;">
+    <a class="btn ghost"
+       href="https://creator.line.me/"
+       target="_blank" rel="noreferrer">
+      開啟 LINE Creators Market（新視窗）
+    </a>
+  </div>
+
+        <div class="muted small" style="margin-top:10px; line-height:1.7;">
+          建議上傳順序：<br/>
+          1) 建立新貼圖商品（一般貼圖）<br/>
+          2) 上傳貼圖：01.png…（或從起始編號開始）<br/>
+          3) 上傳封面：main.png（240×240）<br/>
+          4) 上傳列表縮圖：tab.png（96×74）<br/>
+          5) 填寫標題/說明 → 送出審核
+        </div>
+      </div>
+
+        </div>
+      </section>
+    </div>
+
+    <!-- 3. 切割結果 / 選 Main & Tab -->
+    <section class="card">
+      <div class="card-hd">
+        <h2>3) 切割結果（選 Main / Tab）</h2>
+        <p class="muted">切割後選一張當 main / tab。建議選「辨識度高」的那張。</p>
+      </div>
+      <div class="card-bd">
+        <div class="thumb-grid" id="thumbGrid"></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="muted small">© <span id="year"></span>LINE Sticker Prompt Tool 【Zoego】</div>
+    </footer>
+  </main>
+
+  <script src="./page2.js"></script>
+</body>
+</html>

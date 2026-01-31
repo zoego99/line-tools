@@ -1,0 +1,237 @@
+:root{
+  --bg:#1d1f41;
+  --panel: rgba(255,255,255,.03);
+  --border: rgba(255,255,255,.08);
+  --text: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.62);
+  --muted2: rgba(255,255,255,.45);
+  --accent:#22c55e;   /* AI 綠 */
+  --accent2:#19b8ff;
+  --shadow: 0 18px 55px rgba(0,0,0,.35);
+  --r: 18px;
+  --r2: 14px;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", Arial, sans-serif;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: var(--font);
+  /* background: radial-gradient(1000px 600px at 20% -10%, rgba(34,197,94,.16), transparent 60%),
+              radial-gradient(900px 500px at 90% 0%, rgba(25,184,255,.16), transparent 55%),
+              var(--bg); */
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container{max-width: 1120px; margin: 18px auto 50px; padding: 0 16px}
+
+.topbar{
+  max-width:1120px;
+  margin: 18px auto 0;
+  padding: 16px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  box-shadow: var(--shadow);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.brand{display:flex; gap:12px; align-items:center}
+.logo{
+  width:50px; height:50px; border-radius: 5px;
+  display:grid; place-items:center;
+  /* background: linear-gradient(135deg, rgba(34,197,94,.22), rgba(25,184,255,.14)); */
+  border: 1px solid var(--border);
+}
+.brand-title{font-weight: 900}
+.brand-sub{font-size: 13px; color: var(--muted)}
+.pill{
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  margin-left: 8px;
+  color: var(--muted);
+}
+.top-actions{display:flex; gap:10px; flex-wrap:wrap}
+
+.card{
+  margin-top: 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+}
+.card-hd{padding: 16px 18px 0}
+.card-hd h2{margin:0; font-size: 18px}
+.card-bd{padding: 14px 18px 18px}
+
+.muted{color: var(--muted)}
+.small{font-size: 12px}
+
+.block{margin-top: 14px}
+.block-title{font-weight: 1000; margin-bottom: 10px}
+
+.seg{display:flex; gap:10px; flex-wrap:wrap}
+.segbtn{
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.04);
+  color: var(--muted);
+  padding: 10px 14px;
+  border-radius: 5px;
+  cursor:pointer;
+  font-weight: 900;
+}
+.segbtn.is-on{
+  color: var(--text);
+  border-color: rgb(228, 209, 62);
+  box-shadow: 0 0 0 4px rgba(34,197,94,.08);
+}
+
+.hint{margin-top: 8px}
+#sizeHint{margin-top: 10px}
+
+.field{margin-top: 12px}
+label{display:block; margin-bottom: 8px; color: var(--muted); font-size: 13px; font-weight: 900}
+
+.input,.textarea{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.18);
+  color: var(--text);
+  outline:none;
+}
+.textarea{resize: vertical}
+.textarea.code{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
+
+.row2{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap}
+.grow{flex:1; min-width: 260px}
+
+.actions{display:flex; gap:10px; flex-wrap:wrap}
+
+.btn{
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 14px;
+  cursor:pointer;
+  font-weight: 900;
+}
+.btn:hover{transform: translateY(-1px)}
+.btn:active{transform: translateY(0)}
+.btn.primary{
+  border-color: rgba(34,197,94,.45);
+  background: linear-gradient(135deg, rgba(34,197,94,.22), rgba(25,184,255,.12));
+}
+.btn.ghost{background: transparent}
+.btn[disabled]{opacity:.5; cursor:not-allowed; transform:none}
+
+.uploader{margin-top: 12px}
+.uploader input[type=file]{display:none}
+.uploader-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+
+.drop{
+  margin-top: 12px;
+  padding: 18px 16px;
+  border-radius: var(--r2);
+  border: 1px dashed rgba(255,255,255,.18);
+  background: rgba(0,0,0,.12);
+  display:grid; place-items:center; gap:6px;
+}
+.drop.is-over{border-color: rgba(34,197,94,.55); box-shadow: 0 0 0 4px rgba(34,197,94,.08)}
+.drop-icon{font-size: 26px}
+.drop-title{font-weight: 900}
+.drop-sub{color: var(--muted); font-size: 13px}
+
+.preview{
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--r2);
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.14);
+}
+.preview-title{display:flex; align-items:center; justify-content:space-between; margin-bottom: 10px}
+.preview img{width:100%; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,.02)}
+.preview-meta{margin-top: 10px; color: var(--muted); font-size: 12px}
+
+.btn.tiny{padding: 6px 10px; border-radius: 12px}
+
+.outbox{margin-top: 12px}
+.out-hd{font-weight: 1000; margin: 10px 0 8px}
+.tip{margin-top: 10px}
+
+.footer{
+  margin-top: 18px;
+  text-align:center;
+  color: var(--muted2);
+}
+
+/* ===== Style cards (畫風圖卡) ===== */
+.style-grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+@media (max-width: 980px){
+  .style-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px){
+  .style-grid{ grid-template-columns: 1fr; }
+}
+
+.style-card{
+  text-align:left;
+  padding: 16px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  box-shadow: 0 10px 30px rgba(0,0,0,.22);
+  cursor:pointer;
+}
+
+.style-card:hover{ transform: translateY(-1px); }
+.style-card:active{ transform: translateY(0); }
+
+.style-card.is-on{
+  border-color: rgba(34,197,94,.55);
+  box-shadow: 0 0 0 4px rgba(34,197,94,.10), 0 10px 30px rgba(0,0,0,.22);
+}
+
+.style-hd{ margin-bottom: 12px; }
+.style-title{
+  font-size: 20px;
+  font-weight: 1000;
+  margin-bottom: 6px;
+  color: #fff;
+}
+.style-desc{
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.style-thumbs{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.style-thumbs img{
+  width:100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.12);
+}
