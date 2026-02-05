@@ -9,10 +9,12 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="logo" aria-hidden="true"><img src="./icon_line.svg" alt="" width="50"></div>
+      <div class="logo" aria-hidden="true">
+        <img src="./icon_line.svg" alt="" width="50">
+      </div>
       <div class="brand-text">
         <div class="brand-title">LINE 貼圖 Prompt 生成器 <span class="pill">步驟１</span></div>
-        <div class="brand-sub">按鈕選條件 → 產生中文 Prompt（GPT / Gemini 通用）→ 一鍵複製</div>
+        <div class="brand-sub">按鈕選條件 → 產生中文 Prompt（ChatGPT / Gemini 通用）→ 一鍵複製</div>
       </div>
     </div>
 
@@ -23,30 +25,31 @@
   </header>
 
   <main class="container">
-    <!-- A. 條件選擇 -->
+
     <section class="card">
       <div class="card-hd">
         <h2>頁面目的：</h2>
-        <p class="muted">依照以下步驟，協助產出可用於 LINE 貼圖製作 的中文 Prompt，產出後可直接貼到 Gemini / ChatGPT / Lovart 使用。</p>
+        <p class="muted">協助產出可用於 LINE 貼圖製作 的中文 Prompt，可直接貼到 Gemini / ChatGPT / Lovart 使用。</p>
       </div>
 
       <div class="card-bd">
+
         <!-- 1) 內容模式 -->
         <div class="block">
           <div class="block-title">1) 內容模式</div>
           <div class="seg" data-group="contentMode">
             <button class="segbtn is-on" data-value="role_text" type="button">主角 + 文字</button>
             <button class="segbtn" data-value="role_only" type="button">主角</button>
-            <button class="segbtn" data-value="text_only" type="button">純文字</button>
           </div>
+          <div class="hint muted small" id="modeHint"></div>
         </div>
 
-        <!-- 2) 貼圖數量 -->
+        <!-- 2) 貼圖數量（新增按鈕：3×3 / 5×5） -->
         <div class="block">
           <div class="block-title">2) 貼圖數量</div>
-          <div class="seg" data-group="grid">
+          <div class="seg" data-group="packSize">
             <button class="segbtn" data-value="3x3" type="button">3×3（9張）</button>
-            <button class="segbtn is-on" data-value="5x4" type="button">5×4（20張）</button>
+            <button class="segbtn is-on" data-value="5x5" type="button">5×5（25張）</button>
           </div>
           <div class="hint muted small" id="sizeHint"></div>
         </div>
@@ -59,31 +62,10 @@
             <button class="segbtn" data-value="custom_role" type="button">自訂角色（文字描述）</button>
           </div>
 
-          <!-- 上傳參考圖 -->
-          <div id="uploadWrap" class="uploader">
-            <input id="fileInput" type="file" accept="image/*" />
-            <div class="uploader-row">
-              <button class="btn ghost" id="btnPick" type="button">選擇參考圖</button>
-              <div class="muted small">（若工具支援參考圖一致性，請上傳同一張做角色一致）</div>
-            </div>
-
-            <div class="drop" id="dropZone">
-              <div class="drop-icon">⬆️</div>
-              <div class="drop-title">拖曳參考圖到這裡</div>
-              <div class="drop-sub">背景建議乾淨，方便模型抓角色一致性</div>
-            </div>
-
-            <div class="preview" id="previewWrap" hidden>
-              <div class="preview-title">
-                <span>參考圖預覽</span>
-                <button class="btn tiny ghost" id="btnClear" type="button">清除</button>
-              </div>
-              <img id="previewImg" alt="參考圖預覽" />
-              <div class="preview-meta" id="previewMeta"></div>
-            </div>
+          <div id="refHintWrap" class="note">
+            若你使用的工具支援「參考圖一致性」，請在 <b>Gemini / ChatGPT</b> 的生圖介面中上傳參考圖（本頁不提供上傳）。
           </div>
 
-          <!-- 自訂角色描述 -->
           <div id="customRoleWrap" class="field" hidden>
             <label>自訂角色描述（例：7歲小女孩、短髮、戴眼鏡、背小書包）</label>
             <textarea id="customRole" class="textarea" rows="3" placeholder="請用一句或兩句描述外觀、年齡感、配件、氣質"></textarea>
@@ -91,12 +73,8 @@
 
           <div class="row2">
             <div class="field grow">
-              <label>主角名稱（可選但建議填，例：卡比巴拉店長 / 上班族阿明 / 可愛小女孩）</label>
+              <label>主角名稱（建議填，例：卡比巴拉店長 / 上班族阿明 / 可愛小女孩）</label>
               <input id="roleName" class="input" placeholder="例：卡比巴拉店長 / 上班族阿明 / 可愛小女孩" />
-            </div>
-            <div class="field grow">
-              <label>文字內容（可選；用逗號/換行分隔，不填會自動帶入）</label>
-              <input id="customTexts" class="input" placeholder="例：收到,OK,謝謝,辛苦了（不填則依主題自動補齊）" />
             </div>
           </div>
         </div>
@@ -111,13 +89,22 @@
           </div>
         </div>
 
-        <!-- 5) 畫風 -->
+        <!-- 5) 文字清單 -->
+        <div class="block" id="textBlock">
+          <div class="block-title">5) 文字清單（會依貼圖數量自動調整）</div>
+          <div class="muted small" id="textHint"></div>
+          <div class="field">
+            <textarea id="textList" class="textarea" rows="8"
+              placeholder="請輸入文字清單（一行一則）"></textarea>
+          </div>
+        </div>
+
+        <!-- 6) 畫風 -->
         <div class="block">
-          <div class="block-title">5) 畫風（點選圖卡）</div>
+          <div class="block-title">6) 畫風（點選圖卡）</div>
           <div class="muted small">每個畫風顯示多張範例圖，提供畫風進行參考選擇。</div>
 
           <div class="style-grid" id="styleGrid">
-            <!-- 可愛Q版 -->
             <button class="style-card is-on" type="button" data-style="cute_q">
               <div class="style-hd">
                 <div class="style-title">可愛Q版</div>
@@ -130,7 +117,6 @@
               </div>
             </button>
 
-            <!-- 照片寫實 -->
             <button class="style-card" type="button" data-style="photo_real">
               <div class="style-hd">
                 <div class="style-title">照片寫實</div>
@@ -143,7 +129,6 @@
               </div>
             </button>
 
-            <!-- 3D公仔 -->
             <button class="style-card" type="button" data-style="toy_3d">
               <div class="style-hd">
                 <div class="style-title">3D公仔</div>
@@ -156,7 +141,6 @@
               </div>
             </button>
 
-            <!-- 童畫繪本 -->
             <button class="style-card" type="button" data-style="kids_book">
               <div class="style-hd">
                 <div class="style-title">童畫繪本</div>
@@ -169,11 +153,10 @@
               </div>
             </button>
 
-            <!-- 童趣手繪 -->
             <button class="style-card" type="button" data-style="fun_draw">
               <div class="style-hd">
                 <div class="style-title">童趣手繪</div>
-                <div class="style-desc">手繪塗鴉、線條隨性但一致、可愛</div>
+                <div class="style-desc">手繪塗鴉感、線條隨性但一致、可愛</div>
               </div>
               <div class="style-thumbs">
                 <img src="./img/e1.jpg" onerror="this.src='./assets/placeholders/thumb.png'" alt="童趣手繪範例1">
@@ -182,7 +165,6 @@
               </div>
             </button>
 
-            <!-- 古風水墨 -->
             <button class="style-card" type="button" data-style="ink_style">
               <div class="style-hd">
                 <div class="style-title">古風水墨</div>
@@ -195,56 +177,48 @@
               </div>
             </button>
 
-            <!-- 吉卜力氛圍 -->
-            <button class="style-card" type="button" data-style="warm_anime">
+            <button class="style-card" type="button" data-style="ghibli">
               <div class="style-hd">
-                <div class="style-title">吉卜力氛圍</div>
-                <div class="style-desc">日系溫暖動畫氛圍、治癒感、柔和光影</div>
+                <div class="style-title">吉卜力風</div>
+                <div class="style-desc">日系溫暖動畫氛圍、治癒、柔和光影</div>
               </div>
               <div class="style-thumbs">
-                <img src="./img/g1.jpg" onerror="this.src='./assets/placeholders/thumb.png'" alt="吉卜力氛圍範例1">
-                <img src="./img/g2.jpg" onerror="this.src='./assets/placeholders/thumb.png'" alt="吉卜力氛圍範例2">
-                <img src="./img/g3.jpg" onerror="this.src='./assets/placeholders/thumb.png'" alt="吉卜力氛圍範例3">
+                <img src="./img/g1.jpg" onerror="this.src='./assets/placeholders/thumb.png'" alt="吉卜力範例1">
+                <img src="./img/g2.jpg" onerror="this.src='./assets/placeholders/thumb.png'" alt="吉卜力範例2">
+                <img src="./img/g3.jpg" onerror="this.src='./assets/placeholders/thumb.png'" alt="吉卜力範例3">
               </div>
             </button>
-          </div>
-
-          <div class="muted small hint" id="styleHint"></div>
-          <div class="muted small" style="margin-top:8px;">
-            畫風參考圖僅供理解方向；實際生成結果以 Prompt 與模型為準。
           </div>
         </div>
 
       </div>
     </section>
 
-    <!-- B. 輸出 -->
+    <!-- 輸出 -->
     <section class="card">
       <div class="card-hd">
-        <h2>輸出（Prompt + Negative Prompt）</h2>
-        <p class="muted">產生後會出現在程式碼框，可直接一次複製貼到 Gemini / ChatGPT。</p>
+        <h2>輸出 Prompt（ChatGPT / Gemini 通用）</h2>
+        <p class="muted">此框已包含 Prompt + Negative Prompt，可一鍵全選複製。</p>
       </div>
 
       <div class="card-bd">
         <div class="actions">
           <button class="btn primary" id="btnGen" type="button">產生 Prompt</button>
-          <button class="btn" id="btnCopy" type="button" disabled>一鍵複製</button>
+          <button class="btn" id="btnCopy" type="button" disabled>複製（Prompt+Negative）</button>
         </div>
 
         <div class="outbox">
-          <div class="out-hd">程式碼框</div>
+          <div class="out-hd">程式碼框（Prompt + Negative Prompt）</div>
           <textarea id="outAll" class="textarea code" rows="18" placeholder="按「產生 Prompt」後顯示"></textarea>
-          <div class="tip muted small">
-            規格內建：無格線、等分清楚、每格四邊留白（約10px安全邊距）、背景乾淨白色利於後續去背。
-          </div>
         </div>
       </div>
     </section>
 
-    <footer class="footer">
-      <div class="muted small">© <span id="year"></span> LINE Sticker Prompt Tool 【Zoego】</div>
-    </footer>
   </main>
+
+  <footer class="footer small">
+    建議流程：產生 Prompt → 生圖 → 下載大圖 → Page2 切割 / 去背 / 命名 / ZIP
+  </footer>
 
   <script src="./app.js"></script>
 </body>

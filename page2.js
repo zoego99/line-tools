@@ -1,9 +1,8 @@
 const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-/** 切割模板（目標大圖） */
+/** 切割模板（目標大圖）— 只保留 1:1 */
 const GRID_SPECS = {
-  "5x4": { w: 2560, h: 1664, rows: 4, cols: 5, count: 20 },
+  "5x5": { w: 2560, h: 2560, rows: 5, cols: 5, count: 25 },
   "3x3": { w: 1536, h: 1536, rows: 3, cols: 3, count: 9  },
 };
 
@@ -15,9 +14,10 @@ const TAB_W = 96;            // tab.png 96x74
 const TAB_H = 74;
 
 const STATE = {
-  grid: "5x4",
+  grid: "5x5",
   tol: 24,        // 白底去背容差（進階）
-  outType: "sticker",
+  deviceMode: "auto", // auto | desktop | mobile
+  effectiveDevice: "desktop", // desktop | mobile (resolved)
 
   img: null,
   imgName: "",
@@ -51,10 +51,40 @@ function fitContain(srcW, srcH, dstW, dstH){
   return { s, x, y, w, h };
 }
 
+/** device detect */
+function isMobileLike(){
+  const ua = navigator.userAgent || "";
+  const touchMac = (navigator.maxTouchPoints > 1) && /Macintosh/.test(ua); // iPadOS (desktop UA)
+  const iOS = /iPad|iPhone|iPod/.test(ua) || touchMac;
+  const android = /Android/.test(ua);
+  return iOS || android;
+}
+
+function resolveDevice(){
+  if (STATE.deviceMode === "desktop") return "desktop";
+  if (STATE.deviceMode === "mobile") return "mobile";
+  return isMobileLike() ? "mobile" : "desktop";
+}
+
+function updateDeviceUI(){
+  STATE.effectiveDevice = resolveDevice();
+
+  const hint = $("#deviceHint");
+  if (hint){
+    hint.textContent =
+      `目前：${STATE.effectiveDevice === "mobile" ? "平板/手機（建議逐張下載）" : "電腦（建議 ZIP）"}`
+      + `（你也可手動切換）`;
+  }
+
+  const desktopBlock = $("#desktopBlock");
+  const mobileBlock = $("#mobileBlock");
+  if (desktopBlock) desktopBlock.classList.toggle("hidden", STATE.effectiveDevice !== "desktop");
+  if (mobileBlock) mobileBlock.classList.toggle("hidden", STATE.effectiveDevice !== "mobile");
+}
+
 /* ---------- overlay grid (preview only) ---------- */
 function drawOverlayGrid(ctx, w, h, rows, cols){
   ctx.clearRect(0,0,w,h);
-
   ctx.strokeStyle = "rgba(34,197,94,.55)";
   ctx.lineWidth = 2;
 
@@ -88,8 +118,8 @@ function drawPreview() {
   const stack = document.getElementById("previewStack");
   if (!stack) return;
 
-  // container aspect follows selected grid
-  stack.style.aspectRatio = `${spec.w} / ${spec.h}`;
+  // 1:1
+  stack.style.aspectRatio = `1 / 1`;
 
   // canvas pixel size = container size (avoid CSS stretch + cropping)
   const dpr = window.devicePixelRatio || 1;
@@ -108,7 +138,7 @@ function drawPreview() {
   ctx.clearRect(0, 0, pw, ph);
   ox.clearRect(0, 0, pw, ph);
 
-  $("#gridHint").textContent = `切割：${spec.rows}×${spec.cols}（共${spec.count}張）｜目標大圖：${spec.w}×${spec.h}`;
+  $("#gridHint").textContent = `切割：${spec.rows}×${spec.cols}（共${spec.count}張）｜目標大圖：${spec.w}×${spec.h}（1:1）`;
 
   // No image yet → grid only
   if(!STATE.img){
@@ -196,6 +226,14 @@ function sliceToCells(){
   mainIndex = 0;
   tabIndex = 0;
   renderThumbs(false);
+
+  // reset downloads
+  const dlList = $("#dlList");
+  if (dlList) dlList.innerHTML = "";
+  const btnBuild = $("#btnBuildDownloads");
+  const btnAll = $("#btnDownloadAll");
+  if (btnBuild) btnBuild.disabled = true;
+  if (btnAll) btnAll.disabled = true;
 }
 
 /* ---------- white background removal (fixed mode) ---------- */
@@ -215,7 +253,6 @@ function removeWhiteBg(canvas, tol){
   for(let i=0;i<d.length;i+=4){
     const r = d[i], g = d[i+1], b = d[i+2];
 
-    // near white: high RGB OR low chroma + high brightness
     const max = Math.max(r,g,b);
     const min = Math.min(r,g,b);
 
@@ -276,7 +313,15 @@ function processAll(){
   });
 
   renderThumbs(true);
-  $("#btnZip").disabled = false;
+
+  // enable downloads
+  const btnZip = $("#btnZip");
+  const btnBuild = $("#btnBuildDownloads");
+  const btnAll = $("#btnDownloadAll");
+
+  if (btnZip) btnZip.disabled = false;
+  if (btnBuild) btnBuild.disabled = false;
+  if (btnAll) btnAll.disabled = false;
 }
 
 /* ---------- thumbs + main/tab select ---------- */
@@ -296,7 +341,6 @@ function renderThumbs(useProcessed=false){
 
     const src = useProcessed ? item.canvasOut : item.canvasRaw;
 
-    // draw into a canvas for display
     const cv = document.createElement("canvas");
     cv.width = src.width;
     cv.height = src.height;
@@ -320,6 +364,8 @@ function renderThumbs(useProcessed=false){
     btnMain.addEventListener("click", ()=>{
       mainIndex = i;
       renderThumbs(useProcessed);
+      // rebuild list if already built
+      if ($("#dlList")?.children?.length) buildDownloadButtons();
     });
 
     const btnTab = document.createElement("button");
@@ -329,6 +375,7 @@ function renderThumbs(useProcessed=false){
     btnTab.addEventListener("click", ()=>{
       tabIndex = i;
       renderThumbs(useProcessed);
+      if ($("#dlList")?.children?.length) buildDownloadButtons();
     });
 
     picker.appendChild(btnMain);
@@ -343,13 +390,27 @@ function renderThumbs(useProcessed=false){
   });
 }
 
-/* ---------- ZIP download ---------- */
+/* ---------- blob helpers ---------- */
 function canvasToPngBlob(canvas){
   return new Promise((resolve)=>{
     canvas.toBlob((b)=>resolve(b), "image/png");
   });
 }
 
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 2000);
+}
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+/* ---------- ZIP download (desktop) ---------- */
 async function downloadZip(){
   if(!processed.length){
     alert("請先執行「去背與輸出預覽」，再下載 ZIP。");
@@ -367,7 +428,7 @@ async function downloadZip(){
     zip.file(name, blob);
   }
 
-  // main/tab from selected indices
+  // main/tab
   const mainSrc = processed[mainIndex]?.canvasOut || processed[0].canvasOut;
   const tabSrc  = processed[tabIndex]?.canvasOut  || processed[0].canvasOut;
 
@@ -383,8 +444,8 @@ async function downloadZip(){
 - main.png : ${MAIN_SIZE}x${MAIN_SIZE}
 - tab.png  : ${TAB_W}x${TAB_H}
 Notes:
-- Background removal is fixed to WHITE background.
-- If LINE rejects due to file size (>1MB), reduce complexity or regenerate with cleaner white background.
+- Background removal: WHITE background to transparent.
+- If LINE rejects due to file size (>1MB), regenerate with cleaner white background.
 `;
   zip.file("README.txt", readme);
 
@@ -392,9 +453,110 @@ Notes:
   saveAs(blob, `LINE_stickers_${STATE.grid}_standard.zip`);
 }
 
+/* ---------- Mobile downloads (per-file) ---------- */
+async function buildDownloadButtons(){
+  if(!processed.length){
+    alert("請先執行「去背與輸出預覽」。");
+    return;
+  }
+
+  const dlList = $("#dlList");
+  if (!dlList) return;
+  dlList.innerHTML = "";
+
+  const start = parseIntSafe($("#startNo").value, 1);
+
+  // Prepare main/tab blobs (built fresh to reflect current selection)
+  const mainSrc = processed[mainIndex]?.canvasOut || processed[0].canvasOut;
+  const tabSrc  = processed[tabIndex]?.canvasOut  || processed[0].canvasOut;
+  const mainCanvas = makeFixed(mainSrc, MAIN_SIZE, MAIN_SIZE);
+  const tabCanvas  = makeFixed(tabSrc, TAB_W, TAB_H);
+
+  // Create a downloadable list (lazy: create on click to save memory)
+  const items = [];
+
+  // stickers
+  for(let i=0;i<processed.length;i++){
+    const num = start + i;
+    const name = `${String(num).padStart(2,'0')}.png`;
+    items.push({
+      name,
+      getBlob: () => canvasToPngBlob(processed[i].canvasOut),
+    });
+  }
+
+  // main / tab
+  items.push({ name:"main.png", getBlob: () => canvasToPngBlob(mainCanvas) });
+  items.push({ name:"tab.png",  getBlob: () => canvasToPngBlob(tabCanvas) });
+
+  // render buttons
+  items.forEach((it)=>{
+    const row = document.createElement("div");
+    row.className = "dl-item";
+
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = it.name;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn ghost";
+    btn.textContent = "下載";
+    btn.addEventListener("click", async ()=>{
+      btn.disabled = true;
+      btn.textContent = "處理中…";
+      try{
+        const blob = await it.getBlob();
+        downloadBlob(blob, it.name);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "下載";
+      }
+    });
+
+    row.appendChild(name);
+    row.appendChild(btn);
+    dlList.appendChild(row);
+  });
+
+  // store current list for "download all"
+  STATE._dlItems = items;
+}
+
+async function downloadAllIndividually(){
+  if(!STATE._dlItems || !STATE._dlItems.length){
+    await buildDownloadButtons();
+  }
+  const items = STATE._dlItems || [];
+  if(!items.length) return;
+
+  // iOS may prompt multiple times; add small delay to be gentle
+  for (let i=0; i<items.length; i++){
+    const it = items[i];
+    const blob = await it.getBlob();
+    downloadBlob(blob, it.name);
+    await sleep(350);
+  }
+}
+
 /* ---------- events ---------- */
 function bindUI(){
   $("#year").textContent = new Date().getFullYear();
+
+  // init device mode
+  updateDeviceUI();
+
+  // device seg
+  $("#deviceSeg").addEventListener("click", (e)=>{
+    const btn = e.target.closest(".segbtn");
+    if(!btn) return;
+
+    $("#deviceSeg").querySelectorAll(".segbtn").forEach(b=>b.classList.remove("is-on"));
+    btn.classList.add("is-on");
+
+    STATE.deviceMode = btn.dataset.device || "auto";
+    updateDeviceUI();
+  });
 
   const btnPick = $("#btnPick2");
   const fileBig = $("#fileBig");
@@ -402,6 +564,9 @@ function bindUI(){
   const btnSlice = $("#btnSlice");
   const btnProcess = $("#btnProcess");
   const btnZip = $("#btnZip");
+
+  const btnBuild = $("#btnBuildDownloads");
+  const btnAll = $("#btnDownloadAll");
 
   const rx = $("#rx"), ry = $("#ry"), rs = $("#rs");
   const vx = $("#vx"), vy = $("#vy"), vs = $("#vs");
@@ -429,13 +594,17 @@ function bindUI(){
     slicedCells = [];
     processed = [];
     $("#thumbGrid").innerHTML = "";
+    $("#dlList").innerHTML = "";
+
     btnProcess.disabled = true;
-    btnZip.disabled = true;
+    if (btnZip) btnZip.disabled = true;
+    if (btnBuild) btnBuild.disabled = true;
+    if (btnAll) btnAll.disabled = true;
 
     drawPreview();
   });
 
-  // sliders X/Y/Scale (affect alignment)
+  // sliders X/Y/Scale
   function syncTransform(){
     STATE.xPct = parseInt(rx.value,10);
     STATE.yPct = parseInt(ry.value,10);
@@ -446,19 +615,26 @@ function bindUI(){
 
     // changing alignment invalidates processed output
     processed = [];
-    btnZip.disabled = true;
+    $("#dlList").innerHTML = "";
+    if (btnZip) btnZip.disabled = true;
+    if (btnBuild) btnBuild.disabled = true;
+    if (btnAll) btnAll.disabled = true;
+
     btnProcess.disabled = !slicedCells.length;
 
     drawPreview();
   }
   [rx,ry,rs].forEach(el=>el.addEventListener("input", syncTransform));
 
-  // tolerance (advanced)
+  // tolerance
   function syncTol(){
     STATE.tol = parseInt(rt.value,10);
     vt.textContent = `${STATE.tol}`;
     // if already processed, user may want re-process
-    btnZip.disabled = true;
+    if (btnZip) btnZip.disabled = true;
+    if (btnBuild) btnBuild.disabled = true;
+    if (btnAll) btnAll.disabled = true;
+    $("#dlList").innerHTML = "";
   }
   rt.addEventListener("input", syncTol);
   syncTol();
@@ -474,7 +650,9 @@ function bindUI(){
     if(!STATE.img) return;
     sliceToCells();
     btnProcess.disabled = false;
-    btnZip.disabled = true;
+    if (btnZip) btnZip.disabled = true;
+    if (btnBuild) btnBuild.disabled = true;
+    if (btnAll) btnAll.disabled = true;
   });
 
   // process
@@ -487,13 +665,14 @@ function bindUI(){
   });
 
   // zip
-  btnZip.addEventListener("click", downloadZip);
+  if (btnZip) btnZip.addEventListener("click", downloadZip);
 
-  // resize: keep preview correct after window changes
-  window.addEventListener("resize", ()=>{
-    // only redraw if already has container on screen
-    drawPreview();
-  });
+  // mobile downloads
+  if (btnBuild) btnBuild.addEventListener("click", buildDownloadButtons);
+  if (btnAll) btnAll.addEventListener("click", downloadAllIndividually);
+
+  // resize redraw
+  window.addEventListener("resize", ()=> drawPreview());
 
   drawPreview();
 }
@@ -514,7 +693,7 @@ async function loadImageFile(file){
   $("#btnSlice").disabled = false;
   $("#btnReset").disabled = false;
 
-  // reset transform for new image
+  // reset transform
   $("#rx").value = 0; $("#ry").value = 0; $("#rs").value = 100;
   STATE.xPct = 0; STATE.yPct = 0; STATE.sPct = 100;
   $("#vx").textContent = "0%";
@@ -525,8 +704,11 @@ async function loadImageFile(file){
   slicedCells = [];
   processed = [];
   $("#thumbGrid").innerHTML = "";
+  $("#dlList").innerHTML = "";
   $("#btnProcess").disabled = true;
   $("#btnZip").disabled = true;
+  $("#btnBuildDownloads").disabled = true;
+  $("#btnDownloadAll").disabled = true;
 
   drawPreview();
 }

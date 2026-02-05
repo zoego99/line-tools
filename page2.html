@@ -22,7 +22,7 @@
     .canvas-stack{
       position: relative;
       width: 100%;
-      aspect-ratio: 2560 / 1664; /* 預設 5×4，會由 JS 動態覆蓋 */
+      aspect-ratio: 1 / 1; /* 1:1（3x3/5x5 都是正方形） */
       display:block;
     }
     canvas.preview{
@@ -81,14 +81,9 @@
       box-shadow: 0 0 0 4px rgba(34,197,94,.10);
     }
 
-    .two{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-    @media (max-width: 980px){ .two{ grid-template-columns: 1fr; } }
-
     .notice{
       padding: 12px 14px;
       border-radius: var(--r);
-      /* border: 1px solid rgba(255,255,255,.10); */
-      /* background: rgba(34,197,94,.06); */
       color: var(--muted);
       font-size: 1em;
       line-height: 1.5;
@@ -107,9 +102,36 @@
       color: rgba(255,255,255,.5);
     }
     details[open] summary:before{ content:"▼"; }
+
+    /* Mobile download list */
+    .dl-wrap{
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,.03);
+    }
+    .dl-list{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 520px){ .dl-list{ grid-template-columns: 1fr; } }
+    .dl-item{
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(0,0,0,.18);
+    }
+    .dl-item .name{ color: rgba(255,255,255,.88); font-weight: 900; font-size: 13px; }
+    .dl-item .btn{ padding: 8px 10px; border-radius: 12px; }
+    .hidden{ display:none !important; }
   </style>
 
-  <!-- ZIP 產生 -->
+  <!-- ZIP 產生（電腦用） -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
@@ -120,7 +142,7 @@
       <div class="logo" aria-hidden="true"><img src="./icon_line.svg" alt="" width="50"></div>
       <div class="brand-text">
         <div class="brand-title">LINE 貼圖上架整理<span class="pill">步驟2</span></div>
-        <div class="brand-sub"><span class="pill">說明：</span>上傳大圖 → 切割 → 白底去背 → 命名 / Main / Tab → 下載 ZIP</div>
+        <div class="brand-sub"><span class="pill">說明：</span>上傳大圖 → 切割 → 白底去背 → 命名 / Main / Tab → 下載</div>
       </div>
     </div>
 
@@ -133,13 +155,9 @@
 
     <!-- 0. 說明 -->
     <section class="card">
-      <div class="card-hd">
-        <!-- <h2>使用提醒</h2> -->
-        <!-- <p class="muted">這頁不做 AI 生圖，只做「上架整理」。切割採等分＋你微調（最穩）。</p> -->
-      </div>
       <div class="card-bd">
         <div class="notice">
-          <b>請用白色或接近白色背景貼圖</b>（利於去背）並保留每格四邊留白（約 10px 安全邊距）。<br/>
+          <b>請用純白背景（#ffffff）生圖</b>（利於去背）並保留每格四邊留白（約 10px 安全邊距）。<br/>
           本工具固定輸出「一般貼圖」：貼圖 ≤ 370×320、main 240×240、tab 96×74、PNG。
         </div>
       </div>
@@ -161,9 +179,9 @@
           </div>
 
           <div class="block" style="margin-top:12px;">
-            <div class="block-title">切割模式</div>
+            <div class="block-title">切割模式（1:1）</div>
             <div class="seg" id="gridSeg">
-              <button class="segbtn is-on" data-grid="5x4" type="button">5×4（20張）</button>
+              <button class="segbtn is-on" data-grid="5x5" type="button">5×5（25張）</button>
               <button class="segbtn" data-grid="3x3" type="button">3×3（9張）</button>
             </div>
             <div class="hint muted small" id="gridHint"></div>
@@ -209,11 +227,21 @@
       <section class="card">
         <div class="card-hd">
           <h2>2) 白底去背與輸出設定</h2>
-          <p class="muted">本工具固定白底去背＋一般貼圖規格輸出，避免選項過多造成誤用。</p>
+          <p class="muted">支援電腦 ZIP 與平板/手機逐張下載（iPad/手機更穩）。</p>
         </div>
 
         <div class="card-bd">
           <div class="block">
+            <div class="block-title">使用裝置</div>
+            <div class="seg" id="deviceSeg">
+              <button class="segbtn is-on" data-device="auto" type="button">自動</button>
+              <button class="segbtn" data-device="desktop" type="button">電腦</button>
+              <button class="segbtn" data-device="mobile" type="button">平板/手機</button>
+            </div>
+            <div class="muted small" id="deviceHint" style="margin-top:8px;"></div>
+          </div>
+
+          <div class="block" style="margin-top:12px;">
             <div class="block-title">去背（白底）</div>
             <div class="notice" style="margin-top:10px;">
               本工具僅採用 <b>白底去背</b>：將接近白色的背景像素轉為透明 PNG。<br/>
@@ -251,34 +279,54 @@
             <button class="btn" id="btnProcess" type="button" disabled>3) 執行去背與輸出預覽</button>
           </div>
 
-          <div class="actions" style="margin-top:12px;">
-            <button class="btn primary" id="btnZip" type="button" disabled>4) 下載完整 ZIP</button>
+          <!-- Desktop: ZIP -->
+          <div id="desktopBlock">
+            <div class="actions" style="margin-top:12px;">
+              <button class="btn primary" id="btnZip" type="button" disabled>4) 下載完整 ZIP（電腦）</button>
+            </div>
+            <div class="muted small" style="margin-top:10px;">
+              ZIP 內容：01.png…（或從起始編號開始）、main.png、tab.png、README.txt
+            </div>
           </div>
 
-          <div class="muted small" style="margin-top:10px;">
-            ZIP 內容：01.png…（或從起始編號開始）、main.png、tab.png、README.txt
+          <!-- Mobile: per-file downloads -->
+          <div id="mobileBlock" class="hidden">
+            <div class="dl-wrap">
+              <div class="block-title">4) 逐張下載（平板/手機）</div>
+              <div class="muted small" style="margin-top:6px; line-height:1.7;">
+                iPad/手機瀏覽器有時無法可靠下載 ZIP，因此改用逐張下載更穩。<br/>
+                建議下載後用「檔案 App」建立資料夾整理，再上傳 LINE。
+              </div>
+
+              <div class="actions" style="margin-top:10px;">
+                <button class="btn primary" id="btnBuildDownloads" type="button" disabled>產生下載按鈕清單</button>
+                <button class="btn ghost" id="btnDownloadAll" type="button" disabled>一鍵逐張下載全部</button>
+              </div>
+
+              <div class="dl-list" id="dlList"></div>
+
+              <div class="muted small" style="margin-top:10px;">
+                ※ iOS 可能會跳出多次下載確認，屬正常行為。
+              </div>
+            </div>
           </div>
 
           <div class="block" style="margin-top:14px;">
-  <div class="block-title">5) 前往 LINE Creators Market 上傳</div>
-
-  <div class="actions" style="margin-top:10px;">
-    <a class="btn ghost"
-       href="https://creator.line.me/"
-       target="_blank" rel="noreferrer">
-      開啟 LINE Creators Market（新視窗）
-    </a>
-  </div>
-
-        <div class="muted small" style="margin-top:10px; line-height:1.7;">
-          建議上傳順序：<br/>
-          1) 建立新貼圖商品（一般貼圖）<br/>
-          2) 上傳貼圖：01.png…（或從起始編號開始）<br/>
-          3) 上傳封面：main.png（240×240）<br/>
-          4) 上傳列表縮圖：tab.png（96×74）<br/>
-          5) 填寫標題/說明 → 送出審核
-        </div>
-      </div>
+            <div class="block-title">5) 前往 LINE Creators Market 上傳</div>
+            <div class="actions" style="margin-top:10px;">
+              <a class="btn ghost" href="https://creator.line.me/" target="_blank" rel="noreferrer">
+                開啟 LINE Creators Market（新視窗）
+              </a>
+            </div>
+            <div class="muted small" style="margin-top:10px; line-height:1.7;">
+              建議上傳順序：<br/>
+              1) 建立新貼圖商品（一般貼圖）<br/>
+              2) 上傳貼圖：01.png…（或從起始編號開始）<br/>
+              3) 上傳封面：main.png（240×240）<br/>
+              4) 上傳列表縮圖：tab.png（96×74）<br/>
+              5) 填寫標題/說明 → 送出審核
+            </div>
+          </div>
 
         </div>
       </section>
@@ -296,7 +344,7 @@
     </section>
 
     <footer class="footer">
-      <div class="muted small">© <span id="year"></span>LINE Sticker Prompt Tool 【Zoego】</div>
+      <div class="muted small">© <span id="year"></span> LINE Sticker Prompt Tool 【Zoego】</div>
     </footer>
   </main>
 
