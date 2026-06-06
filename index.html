@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>LINE 貼圖 Prompt 生成器</title>
+<link rel="icon" href="./logo2.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="./line.css"/>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="tooltip-global"></div>
+<header class="topbar">
+  <a class="nav-brand" href="./index.html">
+    <div class="nav-logo"><img src="./logo.svg" alt="" class="logo"/></div>
+    <div class="nav-text">
+      <span class="nav-title">LINE 貼圖 Prompt 生成器<span class="topbar-step">步驟 1</span></span>
+      <span class="nav-sub">心怡｜zoego99@gmail.com</span>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <span class="topbar-sub">設定條件 → 產生 Prompt → 貼到 ChatGPT / Gemini 生圖</span>
+  <div class="topbar-right">
+    <a class="nav-link" href="https://gemini.google.com/" target="_blank" rel="noreferrer">前往 Gemini ↗</a>
+    <a class="nav-link accent" href="./linept2.html" target="_blank">貼圖整理上架 →</a>
+  </div>
+</header>
+
+<div class="workspace-index">
+
+  <!-- ══ 左欄：設定條件 ══ -->
+  <div class="col">
+    <div class="col-hd">
+      <div class="col-hd-icon">A.</div>
+      <div>
+        <div class="col-hd-title">設定條件</div>
+        <div class="col-hd-sub">前置步驟 + 四項基本參數</div>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <!-- ── Gemini 前置步驟（可收合） ── -->
+      <details class="gemini-step" id="geminiStep">
+        <summary class="gemini-step-hd">
+          <span>Gemini <span class="badge">前置步驟</span></span>
+          <span style="font-size:10px;opacity:.8">▼ 展開</span>
+        </summary>
+        <div class="gemini-step-body">
+          <div class="gemini-step-flow">
+            ① 點選複製下方「複製Prompt」鈕<br/>
+            ② 將 AI 產生的角色描述貼上<br/>
+            ③ 角色來源，切換為「文字描述角色」
+          </div>
+          <!-- <div class="gemini-step-flow">
+            ① 展開此區塊 → 複製下方特徵提取 Prompt<br/>
+            ② 在 Gemini 對話框上傳參考圖，貼上並送出<br/>
+            ③ 將 Gemini 回覆的角色描述貼回下方欄位<br/>
+            ④ 回到③角色來源，切換為「文字描述角色」
+          </div> -->
+
+          <div>
+            <label>① 提取角色文字描述 Prompt<br/>　（貼到 Gemini）</label>
+            <textarea class="textarea step-ta" rows="4" readonly
+              id="extractPrompt">請觀察上傳的參考圖，提取出核心的視覺特徵，並精簡地融合成一段適合 LINE 貼圖生圖使用的「角色人設 Prompt」。
+要求：
+1. 請忽略過於瑣碎的五官細節，只保留最具辨識度的臉型、髮型與服裝大方向。
+2. 字數請控制在 3 句話以內，語氣精煉。</textarea>
+            <div class="gemini-copy-row" style="margin-top:6px">
+              <button class="btn primary" id="btnCopyExtract" type="button">複製Prompt</button>
+            </div>
+          </div>
+
+          <!-- <div>
+            <label>③ 將 Gemini 回覆的角色描述貼到這裡 → 自動填入③角色來源</label>
+            <textarea class="textarea step-ta" id="geminiResult" rows="3"
+              placeholder="貼入 Gemini 回覆的角色描述…"></textarea>
+            <div class="gemini-copy-row" style="margin-top:6px">
+              <button class="btn" id="btnApplyGemini" type="button">✓ 套用到③角色來源</button>
+            </div>
+          </div> -->
+        </div>
+      </details>
+
+      <!-- ① 內容模式 -->
+      <div>
+        <div class="sec-label">
+          <span class="num">①</span> 內容模式
+          <span class="info-icon" data-tip="主角＋文字：每格貼圖附上指定文字（最後1格為Tab，無文字）。純主角：全部格子只呈現角色動作與表情，無任何文字。">ℹ️</span>
+        </div>
+        <div class="seg" data-group="contentMode">
+          <button class="segbtn is-on" data-value="role_text" type="button">主角 + 文字</button>
+          <button class="segbtn" data-value="role_only" type="button">純主角（無文字）</button>
+        </div>
+        <div class="hint-text" id="modeHint" style="display:none"></div>
+      </div>
+
+      <!-- ② 貼圖數量 -->
+      <div>
+        <div class="sec-label">
+          <span class="num">②</span> 貼圖數量
+          <span class="info-icon" data-tip="3×3 輸出 9 張，5×5 輸出 25 張。最後 1 張固定為 Tab 圖（無文字、主角正面可愛表情）。LINE 正式規格：8 張或 24 張貼圖。">ℹ️</span>
+        </div>
+        <div class="seg" data-group="packSize">
+          <button class="segbtn" data-value="3x3" type="button">3×3（9張）</button>
+          <button class="segbtn is-on" data-value="5x5" type="button">5×5（25張）</button>
+        </div>
+        <div class="hint-text" id="sizeHint" style="display:none"></div>
+      </div>
+
+      <!-- ③ 角色來源 -->
+      <div>
+        <div class="sec-label">
+          <span class="num">③</span> 角色來源
+          <span class="info-icon" data-tip="提供參考圖：GPT 可直接在生圖介面上傳圖片；Gemini 需先用上方前置步驟提取文字描述再套用。文字描述角色：直接輸入外觀文字，兩種工具皆適用。">ℹ️</span>
+        </div>
+        <div class="seg" data-group="roleSource">
+          <button class="segbtn is-on" data-value="ref_image" type="button">提供參考圖</button>
+          <button class="segbtn" data-value="custom_role" type="button">文字描述角色</button>
+        </div>
+        <div id="refHintWrap" class="note-box" style="margin-top:8px">
+          請在 <b>AI 生圖中上傳角色參考圖</b>。<br/>
+          Gemini 無法上傳圖片生成Line貼圖時，<br/>請先用上方<b>前置步驟</b>提取角色描述。
+        </div>
+        <!-- <div id="refHintWrap" class="note-box" style="margin-top:8px">
+          請在 <b>Gemini / ChatGPT</b> 生圖介面上傳參考圖，啟用「角色一致性」（本頁不需上傳）。<br/>
+          Gemini 使用者請先用上方<b>前置步驟</b>提取角色描述。
+        </div> -->
+        <div id="customRoleWrap" hidden style="margin-top:8px">
+          <label>角色描述（外觀、年齡感、服裝、配件）</label>
+          <textarea id="customRole" class="textarea" rows="3"
+            placeholder="例：20多歲女性上班族、短黑髮、藍色西裝、戴眼鏡"></textarea>
+        </div>
+        <div style="margin-top:8px">
+          <label>主角名稱（可選填）</label>
+          <input id="roleName" class="input" placeholder="例：上班族阿明 / 可愛小女孩"/>
+        </div>
+      </div>
+
+      <!-- ④ 主題 + 文字清單 -->
+      <div>
+        <div class="sec-label">
+          <span class="num">④</span> 主題
+          <span class="info-icon" data-tip="選擇主題後，下方文字清單會自動填入預設文字。選「其他」時請自填主題名稱，文字清單可留空讓 AI 依主題自動生成。">ℹ️</span>
+        </div>
+        <div class="seg" data-group="topic">
+          <button class="segbtn is-on" data-value="daily_greet" type="button">日常 / 打招呼</button>
+          <button class="segbtn" data-value="work" type="button">職場情境</button>
+          <button class="segbtn" data-value="custom" type="button">其他</button>
+        </div>
+        <div class="hint-text" id="topicHint" style="margin-top:4px"></div>
+        <div id="customTopicWrap" hidden style="margin-top:8px">
+          <label>自訂主題名稱</label>
+          <input id="customTopicName" class="input" placeholder="例：寵物主人日常 / 健身房打卡 / 旅遊回憶"/>
+          <div class="hint-text" style="margin-top:4px">未填文字清單時，AI 會自動依主題產生貼圖文字</div>
+        </div>
+      </div>
+
+      <div id="textBlock">
+        <div class="sec-label" style="margin-bottom:5px">文字清單</div>
+        <div class="hint-text" id="textHint" style="margin-bottom:7px"></div>
+        <textarea id="textList" class="textarea" rows="10"
+          placeholder="一行一則文字（選填；若不填，AI 依主題自動生成）"></textarea>
+        <div class="hint-text" style="margin-top:5px">💡 每行一則；產生 Prompt 時自動轉為【、】分隔格式</div>
+      </div>
+
+    </div>
+    <div class="col-footer">生圖請用純綠幕背景 #00FF00，去背效果最乾淨</div>
+  </div>
+
+  <!-- ══ 中欄：畫風選擇 ══ -->
+  <div class="col">
+    <div class="col-hd">
+      <div class="col-hd-icon">B.</div>
+      <div>
+        <div class="col-hd-title">⑤ 畫風選擇</div>
+        <div class="col-hd-sub">點選圖卡切換風格</div>
+      </div>
+    </div>
+    <div class="col-body">
+      <div class="style-list" id="styleGrid">
+
+        <button class="style-card is-on" type="button" data-style="chibi">
+          <div class="check">✓</div>
+          <div class="style-row">
+            <div class="style-thumb-wrap">
+              <img src="./img_line/chibi.png" onerror="this.style.display='none'" alt=""/>
+            </div>
+            <div class="style-info">
+              <div class="style-name">日系 Q 版（Chibi）</div>
+              <div class="style-desc">大頭、大眼睛、表情誇張可愛、LINE官方貼圖感</div>
+              <span class="style-tag">⭐ LINE 主流首選</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="style-card" type="button" data-style="kawaii">
+          <div class="check">✓</div>
+          <div class="style-row">
+            <div class="style-thumb-wrap">
+              <img src="./img_line/kawaii.png" onerror="this.style.display='none'" alt=""/>
+            </div>
+            <div class="style-info">
+              <div class="style-name">Kawaii 萌系</div>
+              <div class="style-desc">超可愛療癒、角色圓潤、糖果粉嫩色系</div>
+              <span class="style-tag">⭐ 貼圖商店熱門</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="style-card" type="button" data-style="korean">
+          <div class="check">✓</div>
+          <div class="style-row">
+            <div class="style-thumb-wrap">
+              <img src="./img_line/korean.png" onerror="this.style.display='none'" alt=""/>
+            </div>
+            <div class="style-info">
+              <div class="style-name">韓系簡約</div>
+              <div class="style-desc">文青感、極簡線條、莫蘭迪色系、低飽和高級感</div>
+              <span class="style-tag">⭐ 設計感強</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="style-card" type="button" data-style="clay">
+          <div class="check">✓</div>
+          <div class="style-row">
+            <div class="style-thumb-wrap">
+              <img src="./img_line/clay.png" onerror="this.style.display='none'" alt=""/>
+            </div>
+            <div class="style-info">
+              <div class="style-name">黏土公仔（3D）</div>
+              <div class="style-desc">玩具模型質感、圓潤立體、3D Render品質</div>
+              <span class="style-tag">⭐ 立體感強</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="style-card" type="button" data-style="storybook">
+          <div class="check">✓</div>
+          <div class="style-row">
+            <div class="style-thumb-wrap">
+              <img src="./img_line/storybook.png" onerror="this.style.display='none'" alt=""/>
+            </div>
+            <div class="style-info">
+              <div class="style-name">治癒系繪本</div>
+              <div class="style-desc">溫暖療癒、故事書插畫感、奶油暖色調</div>
+              <span class="style-tag">溫暖手感</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="style-card" type="button" data-style="fun_draw">
+          <div class="check">✓</div>
+          <div class="style-row">
+            <div class="style-thumb-wrap">
+              <img src="./img_line/fun_draw.png" onerror="this.style.display='none'" alt=""/>
+            </div>
+            <div class="style-info">
+              <div class="style-name">童趣手繪</div>
+              <div class="style-desc">手繪塗鴉感、線條隨性但一致、彩色鉛筆筆觸</div>
+              <span class="style-tag">塗鴉風格</span>
+            </div>
+          </div>
+        </button>
+        <button class="style-card" type="button" data-style="chinese_modern">
+          <div class="check">✓</div>
+          <div class="style-row">
+            <div class="style-thumb-wrap">
+              <img src="./img_line/chinese_modern.png" onerror="this.style.display='none'" alt=""/>
+            </div>
+            <div class="style-info">
+              <div class="style-name">新中式插畫</div>
+              <div class="style-desc">現東方莫蘭迪色系，乾淨流暢、現代感線條</div>
+              <span class="style-tag">融合東方元素</span>
+            </div>
+          </div>
+        </button>
+
+      </div>
+    </div>
+    <div class="col-footer">選擇畫風後點「產生 Prompt」套用</div>
+  </div>
+
+  <!-- ══ 右欄：輸出 Prompt ══ -->
+  <div class="col out-col">
+    <div class="col-hd">
+      <div class="col-hd-icon">C.</div>
+      <div>
+        <div class="col-hd-title">生成的 Prompt 指令</div>
+        <div class="col-hd-sub">可直接貼到 ChatGPT / Gemini</div>
+      </div>
+    </div>
+    <div class="col-body">
+      <div class="out-actions">
+        <button class="btn primary" id="btnGen" type="button">產生 Prompt</button>
+        <button class="btn" id="btnCopy" type="button" disabled>複製全部</button>
+        <button class="btn ghost" id="btnReset" type="button" title="重新產生（覆蓋手動修改）">↺ 重新產生</button>
+        <span class="char-pill" id="charCount"></span>
+      </div>
+      <div class="hint-text" style="margin-bottom:4px;color:rgba(26,26,46,.38)">
+        💡 左側條件改變時自動同步；也可直接在此手動修改
+      </div>
+      <textarea id="outAll" class="textarea mono out-ta"
+        placeholder="設定左側條件後自動同步…"></textarea>
+    </div>
+    <div class="col-footer">
+      流程：產生 Prompt → 生圖（綠幕背景）→ <a href="./linept2.html">頁面 2</a> 切割 / 去背 / 上架
+    </div>
+  </div>
+
+</div>
+<script src="./index.js"></script>
+</body>
+</html>

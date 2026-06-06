@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>LINE 貼圖整理上架｜步驟 2</title>
+<link rel="icon" href="./logo2.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<link rel="stylesheet" href="./line.css"/>
+</head>
+<body>
+<header class="topbar">
+  <a class="nav-brand" href="./linept.html">
+    <div class="nav-logo"><img src="./logo.svg" alt="" class="logo"/></div>
+    <div class="nav-text">
+      <span class="nav-title">LINE 貼圖整理上架<span class="topbar-step">步驟 2</span></span>
+      <span class="nav-sub">心怡｜zoego99@gmail.com</span>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <span class="topbar-sub">上傳大圖 → 格線對位 → 去背 → 下載 ZIP</span>
+  <div class="topbar-right">
+    <a class="nav-link" href="./linept.html">← Prompt 生成器</a>
+    <a class="nav-link accent" href="https://creator.line.me/" target="_blank" rel="noreferrer">LINE Creators ↗</a>
+  </div>
+</header>
+
+<div class="workspace-page2">
+
+  <!-- ══ 左欄 ══ -->
+  <div class="col">
+    <div class="col-hd">
+      <div class="col-hd-icon">1</div>
+      <div>
+        <div class="col-hd-title">上傳 &amp; 格線</div>
+        <div class="col-hd-sub">選圖、規格、對位模式</div>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <div>
+        <div class="sec-label">上傳大圖</div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnPick" type="button">📁 選擇大圖</button>
+          <input id="fileBig" type="file" accept="image/*" style="display:none"/>
+          <button class="btn" id="btnReset" type="button" disabled>↩ 重置</button>
+        </div>
+        <div class="notice" style="margin-top:8px">
+          建議用 <b>綠幕背景（#00FF00）</b> 生圖，右側可自動偵測背景色去背。
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">切割規格</div>
+        <div class="seg" id="gridSeg">
+          <button class="segbtn is-on" data-grid="5x5" type="button">5×5（25張）</button>
+          <button class="segbtn" data-grid="3x3" type="button">3×3（9張）</button>
+        </div>
+        <div class="hint-text" id="gridHint"></div>
+      </div>
+
+      <div>
+        <div class="sec-label">格線調整模式</div>
+        <div class="seg" id="modeSeg">
+          <button class="segbtn is-on" data-mode="global" type="button">⇔ 整欄整列</button>
+          <button class="segbtn" data-mode="cell" type="button">✏ 單格微調</button>
+        </div>
+        <div class="hint-text" id="modeHintTxt">拖拉格線上的圓形把手移動整行/列。</div>
+      </div>
+
+      <div id="cellInfoWrap" style="display:none">
+        <div class="info-box">
+          在下方縮圖點選格子，再拖拉畫布上出現的 4 個圓形把手調整邊界。<br/>
+          調整一格的邊時相鄰格會同步移動。
+        </div>
+        <div class="hint-text" id="cellSelHint" style="margin-top:5px">未選取任何格子</div>
+      </div>
+
+      <div>
+        <div class="sec-label">操作</div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnSlice" type="button" disabled>✂ 開始切割</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">命名 / 編號</div>
+        <label>起始編號（第二組填 25）</label>
+        <input id="startNo" class="input" value="1" type="number" min="1"/>
+      </div>
+
+    </div>
+    <div class="col-footer">LINE：8 或 24 張貼圖 + main + tab</div>
+  </div>
+
+  <!-- ══ 中欄：畫布 ══ -->
+  <div class="canvas-col">
+    <div class="canvas-toolbar">
+      <span style="font-size:12px;font-weight:900;color:var(--muted)">預覽</span>
+      <span class="info-chip" id="imgInfo">尚未上傳</span>
+      <span class="info-chip" id="modeChip">整欄整列</span>
+    </div>
+
+    <div class="canvas-body">
+      <div class="canvas-area" id="canvasArea">
+        <div id="emptyState" style="display:flex;flex-direction:column;
+          align-items:center;justify-content:center;gap:10px;pointer-events:none;
+          position:absolute;inset:0">
+          <div style="font-size:40px;opacity:.2">🖼</div>
+          <div style="font-size:14px;color:var(--muted2);font-weight:700">尚未上傳大圖</div>
+          <div style="font-size:12px;color:var(--muted2)">點左欄「選擇大圖」開始</div>
+        </div>
+        <!-- imgCon injected here -->
+      </div>
+
+      <!-- Thumb strip (right side, always visible after slice) -->
+      <div class="thumb-strip" id="thumbStrip" style="display:none">
+        <div class="thumb-strip-hd">★=Main　◈=Tab</div>
+        <div class="thumb-strip-scroll">
+          <div class="thumb-strip-grid" id="thumbGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-info">
+      <span style="font-size:11px;color:var(--muted2)">
+        💡 整欄整列：拖圓形把手｜單格微調：點右側縮圖選格 → 拖四個邊框把手
+      </span>
+    </div>
+  </div>
+
+  <!-- ══ 右欄：去背 ══ -->
+  <div class="col">
+    <div class="col-hd">
+      <div class="col-hd-icon">2</div>
+      <div>
+        <div class="col-hd-title">去背與下載</div>
+        <div class="col-hd-sub">偵測背景色 → 去背 → ZIP</div>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <div>
+        <div class="sec-label">去背選項</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button class="btn is-on" id="btnBgYes" type="button">✅ 幫我去背</button>
+          <button class="btn" id="btnBgNo" type="button">⬜ 已去背</button>
+        </div>
+      </div>
+
+      <div id="bgAdvanced">
+        <div>
+          <div class="sec-label">偵測背景色</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="bg-swatch" id="bgSwatch" style="background:#00ff00"></span>
+            <span id="bgColorTxt" style="font-size:12px;color:var(--muted)">rgb(0,255,0)</span>
+            <button class="btn" id="btnDetect" type="button" style="padding:5px 10px;font-size:11px" disabled>🔍 重新偵測</button>
+          </div>
+          <div class="hint-text">切割後自動偵測第1格四角主要背景色</div>
+        </div>
+
+        <details>
+          <summary>進階去背微調</summary>
+          <div class="adv-box">
+            <div class="range-row">
+              <div class="hint-text">背景閾值</div>
+              <input id="rt" type="range" min="10" max="120" value="55"/>
+              <div class="range-val" id="vt">55</div>
+            </div>
+            <div class="hint-text" style="font-size:10px;margin-top:2px">越大去背越強，數值高可解鋸齒</div>
+            <div class="range-row">
+              <div class="hint-text">軟邊範圍</div>
+              <input id="rsoft" type="range" min="0" max="30" value="8"/>
+              <div class="range-val" id="vsoft">8</div>
+            </div>
+            <div class="hint-text" style="font-size:10px;margin-top:2px">小=銳利邊緣 / 大=漸進透明</div>
+            <div class="range-row">
+              <div class="hint-text">邊緣收縮</div>
+              <input id="rerode" type="range" min="0" max="3" value="1"/>
+              <div class="range-val" id="verode">1px</div>
+            </div>
+            <label class="chk-row"><input type="checkbox" id="chkDefringe" checked/>去色滲（消除邊緣背景色光暈）</label>
+            <label class="chk-row"><input type="checkbox" id="chkSpill" checked/>消除綠光/藍光殘影（Spill Suppression）</label>
+            <label class="chk-row"><input type="checkbox" id="chkHollow"/>挖空內部背景（手臂與身體間空隙）</label>
+          </div>
+        </details>
+
+        <div class="live-wrap">
+          <div class="live-hd">
+            <span>即時預覽（第 <span id="liveIdx">1</span> 張）</span>
+            <div class="live-nav">
+              <button id="btnPrevLive" type="button">‹</button>
+              <button id="btnNextLive" type="button">›</button>
+            </div>
+          </div>
+          <div class="live-area"><canvas id="liveCv"></canvas></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">執行 &amp; 下載</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button class="btn" id="btnProcess" type="button" disabled>🔄 去背預覽</button>
+          <button class="btn primary" id="btnZip" type="button" disabled>⬇ ZIP</button>
+        </div>
+        <div class="hint-text" style="margin-top:5px">ZIP：01.png…＋main.png（240×240）＋tab.png（96×74）</div>
+      </div>
+
+      <div id="mtPreviewSec" style="display:none">
+        <div class="sec-label">Main / Tab 預覽</div>
+        <div class="mt-preview">
+          <div class="mt-cell">
+            <div class="mt-cell-hd main-hd">★ Main 240×240</div>
+            <div class="mt-canvas-wrap"><canvas id="mainCv"></canvas></div>
+          </div>
+          <div class="mt-cell">
+            <div class="mt-cell-hd tab-hd">◈ Tab 96×74</div>
+            <div class="mt-canvas-wrap"><canvas id="tabCv"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">LINE 上架</div>
+        <div class="hint-text" style="line-height:1.9">
+          ① 建立商品（一般貼圖）<br/>② 上傳 01.png…<br/>
+          ③ main.png（封面）<br/>④ tab.png（縮圖）<br/>⑤ 填標題 → 送審
+        </div>
+        <div class="btn-row" style="margin-top:10px">
+          <a class="btn" href="https://creator.line.me/" target="_blank">前往 LINE Creators ↗</a>
+        </div>
+      </div>
+
+    </div>
+    <div class="col-footer"><span id="yearTxt"></span> LINE Sticker Tool【Zoego】</div>
+  </div>
+
+</div>
+<script src="./linept2.js"></script>
+</body>
+</html>
