@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>LINE 動態貼圖 Prompt 生成器</title>
+<link rel="icon" href="./logo2.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="./line.css"/>
+</head>
+<body>
+<div id="tooltip-global"></div>
+
+<header class="topbar">
+  <a class="nav-brand" href="./index.html">
+    <div class="nav-logo"><img src="./logo.svg" alt="" class="logo"/></div>
+    <div class="nav-text">
+      <span class="nav-title">LINE 動態貼圖 Prompt 生成器<span class="topbar-step">動態版：步驟1</span></span>
+      <span class="nav-sub">心怡｜zoego99@gmail.com</span>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <span class="topbar-sub">選主題 → 產生 6 格逐幀 Prompt → 貼給 GPT / Gemini（附貼圖參考圖）</span>
+  <div class="topbar-right">
+    <a class="nav-link" href="./index.html">靜態貼圖</a>
+    <a class="nav-link" href="./linept4.html" target="_blank">步驟2：動畫切割 →</a>
+
+  </div>
+</header>
+
+<div class="workspace-anim">
+
+  <!-- ══ 左欄：角色 + 主題 ══ -->
+  <div class="col">
+    <div class="col-hd">
+      <div class="col-hd-icon">A.</div>
+      <div>
+        <div class="col-hd-title">角色 &amp; 動畫主題</div>
+        <div class="col-hd-sub">選主題 → 自動填入 6 格逐幀描述 → 可自行修改</div>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <!-- ① 角色來源 -->
+      <div>
+        <div class="sec-label">
+          <span class="num">①</span> 角色來源
+          <span class="info-icon" data-tip="提供參考圖：把已做好的 LINE 貼圖上傳給 GPT/Gemini，AI 會依圖的風格生成動作。Gemini 使用者請先提取角色文字特徵再填入。">ℹ️</span>
+        </div>
+        <div class="seg" data-group="roleSource">
+          <button class="segbtn is-on" data-value="ref_image" type="button">提供參考圖（已做好的貼圖）</button>
+          <button class="segbtn" data-value="custom_role" type="button">文字描述角色</button>
+        </div>
+        <div id="refHintWrap" class="note-box" style="margin-top:8px">
+          請在 <b>GPT / Gemini</b> 生圖介面上傳你已做好的 LINE 貼圖，AI 會依照該圖的角色風格產生連續動作。
+        </div>
+        <div id="customRoleWrap" hidden style="margin-top:8px">
+          <label>角色描述</label>
+          <textarea id="customRole" class="textarea" rows="2"
+            placeholder="例：20多歲女性上班族、短黑髮、藍色西裝"></textarea>
+        </div>
+
+        <!-- 畫風選擇：只有「文字描述角色」時才顯示 -->
+        <div id="styleWrap" hidden style="margin-top:10px">
+          <div class="sec-label" style="margin-bottom:8px">畫風選擇</div>
+          <div class="style-list3" id="styleGrid3">
+
+            <button class="style-card3 is-on" type="button" data-style="chibi">
+              <div class="check3">✓</div>
+              <div class="style-info">
+                <div class="style-name">日系Q版（Chibi）</div>
+                <div class="style-desc">頭身比1:1~1:2、大眼睛、表情誇張可愛、馬卡龍色系</div>
+              </div>
+            </button>
+
+            <button class="style-card3" type="button" data-style="kawaii">
+              <div class="check3">✓</div>
+              <div class="style-info">
+                <div class="style-name">Kawaii 萌系</div>
+                <div class="style-desc">超可愛療癒、角色圓潤、糖果粉嫩色系</div>
+              </div>
+            </button>
+
+            <button class="style-card3" type="button" data-style="clay">
+              <div class="check3">✓</div>
+              <div class="style-info">
+                <div class="style-name">黏土公仔（3D）</div>
+                <div class="style-desc">玩具模型質感、圓潤立體、3D Render品質</div>
+              </div>
+            </button>
+
+            <button class="style-card3" type="button" data-style="storybook">
+              <div class="check3">✓</div>
+              <div class="style-info">
+                <div class="style-name">治癒系繪本</div>
+                <div class="style-desc">溫暖療癒、故事書插畫感、奶油暖色調</div>
+              </div>
+            </button>
+
+            <button class="style-card3" type="button" data-style="fun_draw">
+              <div class="check3">✓</div>
+              <div class="style-info">
+                <div class="style-name">童趣手繪</div>
+                <div class="style-desc">彩色鉛筆筆觸、手繪塗鴉感、線條自然隨性</div>
+              </div>
+            </button>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 第1列主題 -->
+      <div>
+        <div class="sec-label"><span class="num">②</span> 動畫主題（6格逐幀）</div>
+        <div class="topic-card">
+          <div class="topic-card-hd">
+            <span>動畫主題</span><span class="topic-badge">6 格逐幀動畫</span>
+          </div>
+          <select id="selA" class="topic-select"><!-- options injected by JS --></select>
+          <div style="font-size:11px;color:var(--muted);margin-top:-4px">
+            第1列：格1→格2→格3｜第2列：格4→格5→格6（由左至右，由上至下依序播放）
+          </div>
+          <div class="frame-list">
+            <div class="frame-row">
+              <div class="frame-num">格1</div>
+              <textarea id="a1" class="textarea" rows="2" placeholder="起始動作（情緒醞釀開始）"></textarea>
+            </div>
+            <div class="frame-row">
+              <div class="frame-num">格2</div>
+              <textarea id="a2" class="textarea" rows="2" placeholder="動作小幅遞進"></textarea>
+            </div>
+            <div class="frame-row">
+              <div class="frame-num">格3</div>
+              <textarea id="a3" class="textarea" rows="2" placeholder="動作繼續發展"></textarea>
+            </div>
+            <div class="frame-row">
+              <div class="frame-num">格4</div>
+              <textarea id="a4" class="textarea" rows="2" placeholder="進入高潮準備"></textarea>
+            </div>
+            <div class="frame-row">
+              <div class="frame-num">格5</div>
+              <textarea id="a5" class="textarea" rows="2" placeholder="情緒接近最高點"></textarea>
+            </div>
+            <div class="frame-row">
+              <div class="frame-num">格6</div>
+              <textarea id="a6" class="textarea" rows="2" placeholder="情緒最高潮（可加泡泡字）"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+    </div>
+    <div class="col-footer">
+      建議背景：純白色（#ffffff），動畫每格去背效果一致
+    </div>
+  </div>
+
+  <!-- ══ 右欄：Prompt 輸出 ══ -->
+  <div class="col out-col">
+    <div class="col-hd">
+      <div class="col-hd-icon">B.</div>
+      <div>
+        <div class="col-hd-title">生成的 Prompt 指令</div>
+        <div class="col-hd-sub">複製後貼到 GPT / Gemini，同時上傳已做好的貼圖參考圖</div>
+      </div>
+    </div>
+    <div class="col-body">
+      <div class="out-actions">
+        <button class="btn primary" id="btnGen" type="button">✨ 產生 Prompt</button>
+        <button class="btn" id="btnCopy" type="button" disabled>複製全部</button>
+        <button class="btn ghost" id="btnReset" type="button">↺ 重新產生</button>
+        <span class="char-pill" id="charCount"></span>
+      </div>
+      <div class="hint-text" style="margin-bottom:4px;color:rgba(26,26,46,.38)">
+        💡 條件改變時自動同步；可直接在此手動修改
+      </div>
+      <textarea id="outAll" class="textarea mono out-ta"
+        placeholder="設定左側條件後自動同步…"></textarea>
+
+      <!-- 失敗補救 -->
+      <div class="rescue-box">
+        <div class="rescue-hd" id="rescueToggle">
+          ⚠️ 生圖失敗？點此展開補救句（可單獨複製後貼給 AI）
+          <span id="rescueArrow">▶</span>
+        </div>
+        <div class="rescue-body" id="rescueBody" style="display:none">
+
+          <div class="rescue-item">
+            <div style="flex:1"><b>AI 把 6 格混成一個畫面</b>
+              請嚴格將畫面分為 2 列 3 欄，共 6 個獨立正方形格子，每格之間有清楚分隔，不可將不同格的場景混合在一起。</div>
+            <button class="rescue-copy" data-copy="請嚴格將畫面分為 2 列 3 欄，共 6 個獨立正方形格子，每格之間有清楚分隔，不可將不同格的場景混合在一起。">複製</button>
+          </div>
+
+          <div class="rescue-item">
+            <div style="flex:1"><b>動作重複、不連貫</b>
+              每格角色的肢體姿勢、手臂角度、表情必須與前一格明顯不同，動作幅度由小漸大，呈現連續動態變化，不可重複使用相同的姿勢。</div>
+            <button class="rescue-copy" data-copy="每格角色的肢體姿勢、手臂角度、表情必須與前一格明顯不同，動作幅度由小漸大，呈現連續動態變化，不可重複使用相同的姿勢。">複製</button>
+          </div>
+
+          <div class="rescue-item">
+            <div style="flex:1"><b>Gemini 一直生同樣的圖</b>
+              請重新構思所有格子的動作，不可沿用上一次的構圖，每格的肢體角度、表情與裝飾元素必須有明顯新的創意。</div>
+            <button class="rescue-copy" data-copy="請重新構思所有格子的動作，不可沿用上一次的構圖，每格的肢體角度、表情與裝飾元素必須有明顯新的創意。">複製</button>
+          </div>
+
+          <div class="rescue-item">
+            <div style="flex:1"><b>格子比例跑掉</b>
+              每個格子必須是正方形（寬高比 1:1），2 列 3 欄並排後整體畫面為 3:2 橫式長方形，不可拉伸或壓縮任何格子。</div>
+            <button class="rescue-copy" data-copy="每個格子必須是正方形（寬高比 1:1），2 列 3 欄並排後整體畫面為 3:2 橫式長方形，不可拉伸或壓縮任何格子。">複製</button>
+          </div>
+
+          <div class="rescue-item">
+            <div style="flex:1"><b>角色風格前後不一致</b>
+              兩列的主角必須與上傳的參考圖角色完全一致，臉型、髮型、服裝、體型比例在所有 6 格中不可出現任何差異或變形。</div>
+            <button class="rescue-copy" data-copy="兩列的主角必須與上傳的參考圖角色完全一致，臉型、髮型、服裝、體型比例在所有 6 格中不可出現任何差異或變形。">複製</button>
+          </div>
+
+          <div class="rescue-item">
+            <div style="flex:1"><b>背景不是白色</b>
+              每格背景必須是純白色（#ffffff），不可有任何漸層、陰影、花紋或場景物件，角色主體與白色背景邊界必須清晰銳利。</div>
+            <button class="rescue-copy" data-copy="每格背景必須是純白色（#ffffff），不可有任何漸層、陰影、花紋或場景物件，角色主體與白色背景邊界必須清晰銳利。">複製</button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="notice">
+        <b>下一步：</b>切割後前往
+        <a href="https://ezgif.com/apng-maker" target="_blank" rel="noreferrer"
+          style="color:var(--primary);font-weight:700">EZgif APNG Maker ↗</a>
+        上傳同主題的圖片，設定每張停留毫秒後輸出 APNG。
+      </div>
+
+    </div>
+    <div class="col-footer">
+      流程：產生 Prompt → 生圖 → <a href="./linept4.html">動畫切割頁</a> 切割 → EZgif 製作 APNG → LINE 上架
+    </div>
+  </div>
+
+</div>
+<script src="./linept3.js"></script>
+</body>
+</html>

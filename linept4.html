@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>LINE 動態貼圖切割處理器</title>
+<link rel="icon" href="./logo2.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<link rel="stylesheet" href="./line.css"/>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="nav-brand" href="./index.html">
+    <div class="nav-logo"><img src="./logo.svg" alt="" class="logo"/></div>
+    <div class="nav-text">
+      <span class="nav-title">LINE 動態貼圖切割處理器<span class="topbar-step">動態版:步驟2</span></span>
+      <span class="nav-sub">心怡｜zoego99@gmail.com</span>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <span class="topbar-sub">上傳大圖 → 切割 6 格 → 去背 → 選取命名 → 下載 ZIP</span>
+  <div class="topbar-right">
+    <a class="nav-link" href="./linept3.html">回到步驟1：Prompt 生成器</a>
+    <a class="nav-link  accent" href="https://ezgif.com/apng-maker" target="_blank" rel="noreferrer">EZgif APNG ↗</a>
+    <a class="nav-link  accent" href="https://creator.line.me/" target="_blank" rel="noreferrer">LINE Creators ↗</a>
+  </div>
+</header>
+
+<div class="workspace-anim2">
+
+  <!-- ══ 左欄 ══ -->
+  <div class="col">
+    <div class="col-hd">
+      <div class="col-hd-icon">1</div>
+      <div>
+        <div class="col-hd-title">上傳 &amp; 切割</div>
+        <div class="col-hd-sub">固定 2列×3欄，共 6 格</div>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <div>
+        <div class="sec-label">上傳大圖</div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnPick" type="button">📁 選擇大圖</button>
+          <input id="fileBig" type="file" accept="image/*" style="display:none"/>
+        </div>
+        <div class="notice" style="margin-top:8px">
+          固定切割為 <b>2列×3欄</b>（共6格），對應動畫分鏡 Prompt 的輸出格式。
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">紅框邊界調整</div>
+        <div class="hint-text" style="margin-bottom:8px">
+          直接拖拉中間預覽圖上的<b style="color:#e53935">紅色邊框</b>（四邊或四角）調整切割範圍，藍色格線自動等份更新。
+        </div>
+        <div class="margin-info">
+          <span class="margin-chip">上 <span id="vTop">0%</span></span>
+          <span class="margin-chip">下 <span id="vBottom">0%</span></span>
+          <span class="margin-chip">左 <span id="vLeft">0%</span></span>
+          <span class="margin-chip">右 <span id="vRight">0%</span></span>
+        </div>
+        <button class="btn ghost" id="btnResetMargin" type="button" style="margin-top:6px;font-size:11px">↩ 重置紅框</button>
+      </div>
+
+      <div>
+        <div class="sec-label">切割操作</div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnSlice" type="button" disabled>✂ 開始切割</button>
+        </div>
+        <div class="hint-text" id="sliceHint" style="margin-top:6px"></div>
+      </div>
+
+      <div>
+        <div class="sec-label">去背設定</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button class="btn is-on" id="btnBgYes" type="button">✅ 幫我去背</button>
+          <button class="btn" id="btnBgNo" type="button">⬜ 已去背</button>
+        </div>
+        <div id="bgAdv" style="margin-top:10px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span class="bg-swatch" id="bgSwatch" style="background:#fff;border:1px solid #ccc"></span>
+            <span id="bgColorTxt" style="font-size:12px;color:var(--muted)">自動偵測</span>
+            <button class="btn" id="btnDetect" type="button"
+              style="padding:4px 9px;font-size:11px" disabled>🔍 重新偵測</button>
+          </div>
+          <details>
+            <summary>進階去背微調</summary>
+            <div class="adv-box" style="margin-top:6px">
+              <div class="range-row">
+                <div class="hint-text">背景閾值</div>
+                <input id="rt" type="range" min="10" max="120" value="55"/>
+                <div class="range-val" id="vt">55</div>
+              </div>
+              <div class="range-row">
+                <div class="hint-text">軟邊範圍</div>
+                <input id="rsoft" type="range" min="0" max="30" value="8"/>
+                <div class="range-val" id="vsoft">8</div>
+              </div>
+              <div class="range-row">
+                <div class="hint-text">邊緣收縮</div>
+                <input id="rerode" type="range" min="0" max="3" value="1"/>
+                <div class="range-val" id="verode">1</div>
+              </div>
+              <label class="chk-row"><input type="checkbox" id="chkDefringe" checked/>去色滲</label>
+              <label class="chk-row"><input type="checkbox" id="chkSpill" checked/>消除綠/藍光殘影</label>
+            </div>
+          </details>
+          <div class="hint-text" style="margin-top:6px">
+            ※ 同一批圖使用相同參數，確保動畫每格去背一致。
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">執行去背</div>
+        <div class="btn-row">
+          <button class="btn" id="btnProcess" type="button" disabled>🔄 套用去背</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn" id="btnDropper" type="button" disabled
+            title="套用去背後，點此啟動滴管模式，再點右欄格子的殘留背景區域去除">
+            💧 滴管補去背
+          </button>
+        </div>
+        <div class="hint-text" style="margin-top:5px">
+          套用去背後，若仍有殘留背景，點「滴管補去背」再點格子上的殘留區域補救。
+        </div>
+      </div>
+
+    </div>
+    <div class="col-footer">LINE 動圖尺寸：最大 320×270px，格式 APNG</div>
+  </div>
+
+  <!-- ══ 中欄：預覽 ══ -->
+  <div class="canvas-col2">
+    <div class="canvas-toolbar2">
+      <span style="font-size:12px;font-weight:900;color:var(--muted)">大圖預覽（2×3 格線）</span>
+      <span class="info-chip" id="imgInfo">尚未上傳</span>
+    </div>
+    <div class="canvas-area2" id="canvasArea">
+      <div id="emptyState" style="position:absolute;inset:0;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:10px;pointer-events:none">
+        <div style="font-size:40px;opacity:.2">🎬</div>
+        <div style="font-size:14px;color:var(--muted2);font-weight:700">尚未上傳大圖</div>
+        <div style="font-size:12px;color:var(--muted2)">點左欄「選擇大圖」開始</div>
+      </div>
+      <!-- imgCon4 injected here -->
+    </div>
+    <div class="canvas-info2">
+      <span style="font-size:11px;color:var(--muted2)">
+        💡 拖拉紅色邊框調整範圍｜藍色格線自動等份｜切割→去背→滴管補救→命名下載
+      </span>
+    </div>
+  </div>
+
+  <!-- ══ 右欄：選取 + 命名 + 下載 ══ -->
+  <div class="col">
+    <div class="col-hd">
+      <div class="col-hd-icon">2</div>
+      <div>
+        <div class="col-hd-title">選取 &amp; 命名 &amp; 下載</div>
+        <div class="col-hd-sub">勾選要用的格、設定檔名、下載 ZIP</div>
+      </div>
+    </div>
+    <div class="col-body">
+
+      <div>
+        <div class="sec-label">6 格預覽（切割後顯示）</div>
+        <div class="hint-text">勾選要保留的格子，修改檔名後下載。</div>
+        <div class="cell-grid" id="cellGrid">
+          <div style="grid-column:1/-1;text-align:center;color:var(--muted2);
+            font-size:12px;padding:20px 0">切割後顯示</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">下載</div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnZip" type="button" disabled>⬇ 下載勾選的圖（ZIP）</button>
+        </div>
+        <div class="hint-text" style="margin-top:5px">
+          僅下載勾選的格子，依設定的檔名命名（.png）。
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">製作 APNG</div>
+        <div class="hint-text" style="line-height:1.9">
+          ① 下載 ZIP，解壓縮<br/>
+          ② 前往 EZgif，上傳同主題的圖片<br/>
+          ③ 設定每張停留時間（毫秒）<br/>
+          ④ 點「Make APNG」輸出<br/>
+          ⑤ 上傳至 LINE Creators Market
+        </div>
+        <div class="btn-row" style="margin-top:8px">
+          <a class="btn" href="https://ezgif.com/apng-maker" target="_blank" rel="noreferrer">
+            前往 EZgif APNG Maker ↗
+          </a>
+        </div>
+      </div>
+
+    </div>
+    <div class="col-footer"><span id="yearTxt"></span> LINE Sticker Tool【Zoego】</div>
+  </div>
+
+</div>
+<script src="./linept4.js"></script>
+</body>
+</html>
