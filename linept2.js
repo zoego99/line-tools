@@ -201,21 +201,32 @@ function autoTrim(canvas){
 
 function resizeSticker(canvas){
   let src=canvas;
-  // 先裁去透明邊距
+  // 先裁去透明邊距，保留主角實際範圍
   const trim=autoTrim(src);
   if(trim){
     const tc=document.createElement("canvas");tc.width=trim.w;tc.height=trim.h;
     tc.getContext("2d").drawImage(src,trim.x,trim.y,trim.w,trim.h,0,0,trim.w,trim.h);
     src=tc;
   }
-  // 縮放：不超過 LINE 上限（370×320），但畫布大小貼合內容，不留空白
-  const scale=Math.min(STICKER_W/src.width, STICKER_H/src.height, 1);
+  // LINE 規格：每張必須固定 370×320px
+  // 以高度為基準縮放（讓人物盡量高），寬度不超過 370 即可
+  const scaleH = STICKER_H / src.height;
+  const scaleW = STICKER_W / src.width;
+  // 優先用高度縮放，寬度若超出才改用寬度縮放
+  const scale = Math.min(scaleH, scaleW, 1) === scaleH && src.width * scaleH <= STICKER_W
+    ? scaleH
+    : Math.min(scaleH, scaleW, 1);
   const dw=Math.max(1,Math.round(src.width*scale));
   const dh=Math.max(1,Math.round(src.height*scale));
-  const out=document.createElement("canvas");out.width=dw;out.height=dh;
+  // 固定輸出 370×320 畫布（全透明背景）
+  const out=document.createElement("canvas");
+  out.width=STICKER_W; out.height=STICKER_H;
   const ctx=out.getContext("2d");
-  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
-  ctx.drawImage(src,0,0,dw,dh);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+  // 置底置中
+  const dx=Math.round((STICKER_W-dw)/2);
+  const dy=STICKER_H-dh;
+  ctx.drawImage(src,dx,dy,dw,dh);
   return out;
 }
 
