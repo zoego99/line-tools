@@ -186,6 +186,15 @@ function buildPrompt(){
     ? (customTopicName || "自訂主題")
     : TOPIC_NAMES[ST.topic];
 
+  // 最重要限制（放最前，Gemini 權重最高）
+  const strictBlock = [
+    "【最重要限制——請先讀這段再開始繪製】",
+    "・絕對禁止在任何格子之間或周圍出現分隔線、格線、邊框、黑線",
+    "・絕對禁止在格子上標注任何數字、編號、序號、文字標籤",
+    "・背景顏色只能使用純綠色（#00FF00），禁止使用白色、灰色或任何其他顏色",
+    "・以上三點為最高優先，違反任何一點均視為生成失敗",
+  ].join("\n");
+
   // 版面規格
   const layoutBlock = [
     "【版面設定】",
@@ -252,6 +261,7 @@ function buildPrompt(){
     }
     return [
       `請生成一張 LINE 貼圖合集大圖，主題為「${topicDisplayName}」貼圖（純主角版，畫面中不得出現任何文字）。\n`,
+      strictBlock, "",
       layoutBlock, "",
       bgBlock, "",
       styleBlock, "",
@@ -338,6 +348,7 @@ function buildPrompt(){
 
   return [
     `請生成一張高品質 LINE 貼圖合集大圖，主題為「${topicDisplayName}」${roleNameLine}，風格一致、${style.label} 畫風。\n`,
+    strictBlock, "",
     layoutBlock, "",
     bgBlock, "",
     styleBlock, "",

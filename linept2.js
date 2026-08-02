@@ -59,14 +59,35 @@ function getScale(){
    BG DETECTION
 ════════════════════════════════════════════════════════════ */
 function detectBgColor(canvas){
+  // 取四角 + 四邊中點各 30×30 區域，選出最常見的顏色（眾數）
   const ctx=canvas.getContext("2d");
   const W=canvas.width,H=canvas.height;
-  let r=0,g=0,b=0,n=0;
-  [[0,0],[W-20,0],[0,H-20],[W-20,H-20]].forEach(([cx,cy])=>{
-    const d=ctx.getImageData(Math.max(0,cx),Math.max(0,cy),Math.min(20,W),Math.min(20,H)).data;
-    for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];n++;}
+  const SZ=30;
+  const regions=[
+    [0,0],[W-SZ,0],[0,H-SZ],[W-SZ,H-SZ],         // 四角
+    [Math.floor(W/2-SZ/2),0],                      // 上中
+    [Math.floor(W/2-SZ/2),H-SZ],                   // 下中
+    [0,Math.floor(H/2-SZ/2)],                      // 左中
+    [W-SZ,Math.floor(H/2-SZ/2)],                   // 右中
+  ];
+  // 量化色桶（每通道除以8），找最多像素的桶
+  const buckets={};
+  regions.forEach(([cx,cy])=>{
+    const d=ctx.getImageData(
+      Math.max(0,cx),Math.max(0,cy),
+      Math.min(SZ,W),Math.min(SZ,H)
+    ).data;
+    for(let i=0;i<d.length;i+=4){
+      if(d[i+3]<128) continue; // 跳過透明
+      const key=`${d[i]>>3}_${d[i+1]>>3}_${d[i+2]>>3}`;
+      buckets[key]=(buckets[key]||{r:d[i],g:d[i+1],b:d[i+2],n:0});
+      buckets[key].n++;
+    }
   });
-  return{r:Math.round(r/n),g:Math.round(g/n),b:Math.round(b/n)};
+  // 找最多次的桶
+  let best={n:0,r:0,g:255,b:0};
+  Object.values(buckets).forEach(v=>{ if(v.n>best.n) best=v; });
+  return{r:best.r,g:best.g,b:best.b};
 }
 
 function updateBgSwatch(){
@@ -200,22 +221,13 @@ function autoTrim(canvas){
 }
 
 function resizeSticker(canvas){
-  let src=canvas;
-  // 先裁去透明邊距，保留主角實際範圍
-  const trim=autoTrim(src);
-  if(trim){
-    const tc=document.createElement("canvas");tc.width=trim.w;tc.height=trim.h;
-    tc.getContext("2d").drawImage(src,trim.x,trim.y,trim.w,trim.h,0,0,trim.w,trim.h);
-    src=tc;
-  }
-  // LINE 規格：每張必須固定 370×320px
-  // 以高度為基準縮放（讓人物盡量高），寬度不超過 370 即可
+  // autoTrim 不做，直接以完整格子縮放至 LINE 規格
+  // 這樣下載的圖與網頁預覽看到的比例完全一致
+  const src=canvas;
+  // 以高度填滿 320px 為優先，寬度不超過 370px
   const scaleH = STICKER_H / src.height;
   const scaleW = STICKER_W / src.width;
-  // 優先用高度縮放，寬度若超出才改用寬度縮放
-  const scale = Math.min(scaleH, scaleW, 1) === scaleH && src.width * scaleH <= STICKER_W
-    ? scaleH
-    : Math.min(scaleH, scaleW, 1);
+  const scale = (src.width * scaleH <= STICKER_W) ? scaleH : scaleW;
   const dw=Math.max(1,Math.round(src.width*scale));
   const dh=Math.max(1,Math.round(src.height*scale));
   // 固定輸出 370×320 畫布（全透明背景）
@@ -504,12 +516,11 @@ function sliceToCells(){
 function processAll(){
   if(!slicedCells.length) return;
   processed=slicedCells.map(({index,canvasRaw})=>{
-    // clone raw
+    // clone raw，去背後保留原始大小（不縮圖），縮圖只在下載 ZIP 時才做
     const clone=document.createElement("canvas");clone.width=canvasRaw.width;clone.height=canvasRaw.height;
     clone.getContext("2d").drawImage(canvasRaw,0,0);
     if(S.doRemoveBg) smartRemoveBg(clone);
-    const out=resizeSticker(clone);
-    return{index,canvasOut:out};
+    return{index,canvasOut:clone};
   });
   _useProc=true;
   renderThumbs(true);updateMtPreview();updateLive();
@@ -541,8 +552,13 @@ function renderThumbs(useProc){
       }
     });
     const imgBox=document.createElement("div");imgBox.className="thumb-img";
-    const cv=document.createElement("canvas");cv.width=src.width;cv.height=src.height;
-    cv.getContext("2d").drawImage(src,0,0);imgBox.appendChild(cv);
+    // 縮圖預覽：統一縮到 120px，不因原圖大小而縮放不一
+    const THUMB_PX=120;
+    const tScale=Math.min(THUMB_PX/src.width,THUMB_PX/src.height,1);
+    const tw=Math.max(1,Math.round(src.width*tScale));
+    const th=Math.max(1,Math.round(src.height*tScale));
+    const cv=document.createElement("canvas");cv.width=tw;cv.height=th;
+    cv.getContext("2d").drawImage(src,0,0,tw,th);imgBox.appendChild(cv);
     const meta=document.createElement("div");meta.className="thumb-meta";
     const num=document.createElement("div");num.className="thumb-num";
     num.textContent=String(startNo+i).padStart(2,"0");
@@ -588,9 +604,13 @@ function updateLive(){
   clone.width=rawCell.canvasRaw.width;clone.height=rawCell.canvasRaw.height;
   clone.getContext("2d").drawImage(rawCell.canvasRaw,0,0);
   if(S.doRemoveBg) smartRemoveBg(clone);
-  cv.width=clone.width;cv.height=clone.height;
-  cv.getContext("2d").clearRect(0,0,cv.width,cv.height);
-  cv.getContext("2d").drawImage(clone,0,0);
+  // 縮放到最大 340px 高或寬，避免撐破版面但不縮得太小
+  const MAX=340;
+  const scale=Math.min(MAX/clone.width,MAX/clone.height,1);
+  const pw=Math.round(clone.width*scale), ph=Math.round(clone.height*scale);
+  cv.width=pw;cv.height=ph;
+  cv.getContext("2d").clearRect(0,0,pw,ph);
+  cv.getContext("2d").drawImage(clone,0,0,pw,ph);
   const li=$("#liveIdx");if(li)li.textContent=idx+1;
 }
 
@@ -602,7 +622,9 @@ async function downloadZip(){
   const start=parseInt($("#startNo").value||"1")||1;
   const zip=new JSZip();
   for(let i=0;i<processed.length;i++){
-    zip.file(`${String(start+i).padStart(2,"0")}.png`,await canvasToPng(processed[i].canvasOut));
+    // 下載時才縮放到 LINE 規格 370×320
+    const final=resizeSticker(processed[i].canvasOut);
+    zip.file(`${String(start+i).padStart(2,"0")}.png`,await canvasToPng(final));
   }
   function mkFixed(src,W,H){
     const out=document.createElement("canvas");out.width=W;out.height=H;
@@ -611,8 +633,8 @@ async function downloadZip(){
     ctx.drawImage(src,s.x,s.y,s.w,s.h);
     return out;
   }
-  const mSrc=processed[mainIdx]?.canvasOut||processed[0].canvasOut;
-  const tSrc=processed[tabIdx]?.canvasOut||processed[0].canvasOut;
+  const mSrc=resizeSticker(processed[mainIdx]?.canvasOut||processed[0].canvasOut);
+  const tSrc=resizeSticker(processed[tabIdx]?.canvasOut||processed[0].canvasOut);
   zip.file("main.png",await canvasToPng(mkFixed(mSrc,MAIN_SZ,MAIN_SZ)));
   zip.file("tab.png", await canvasToPng(mkFixed(tSrc,TAB_W,TAB_H)));
 
@@ -720,6 +742,53 @@ function bindUI(){
   $("#btnProcess").onclick=processAll;
   $("#btnZip").onclick=downloadZip;
   window.addEventListener("resize",()=>{if(S.img)buildImgCon();});
+
+  /* ── 上架資訊 Prompt 產生器 ── */
+  function buildMetaPrompt(){
+    const desc = (document.getElementById("metaDesc")?.value||"").trim()
+                 || "可愛角色貼圖，日常生活與表情用語";
+    return [
+      "我有一套 LINE 貼圖，需要填寫上架資料，請幫我用口語自然的方式寫以下內容：",
+      "",
+      `貼圖內容：${desc}`,
+      "",
+      "請提供：",
+      "1. 標題（英文）：40字以內，簡潔吸引人，適合 LINE 貼圖商店搜尋",
+      "2. 標題（繁體中文）：40字以內",
+      "3. 說明（英文）：160字以內，自然口語，描述貼圖適合的使用情境",
+      "4. 說明（繁體中文）：160字以內",
+      "5. 版權聲明：格式為 © [年份] [作者名]，簡短一行即可",
+      "",
+      "請直接給結果，不需要額外解釋。",
+    ].join("\n");
+  }
+
+  const btnMetaGen  = document.getElementById("btnMetaGen");
+  const btnMetaCopy = document.getElementById("btnMetaCopy");
+  const metaOut     = document.getElementById("metaOut");
+
+  if(btnMetaGen){
+    btnMetaGen.addEventListener("click", ()=>{
+      const p = buildMetaPrompt();
+      if(metaOut) metaOut.value = p;
+      if(btnMetaCopy) btnMetaCopy.disabled = false;
+    });
+  }
+  if(btnMetaCopy){
+    btnMetaCopy.addEventListener("click", async ()=>{
+      const txt = metaOut?.value||""; if(!txt) return;
+      try{ await navigator.clipboard.writeText(txt); }
+      catch{ metaOut?.select(); document.execCommand("copy"); }
+      const old = btnMetaCopy.textContent;
+      btnMetaCopy.textContent = "✓ 已複製！";
+      setTimeout(()=>btnMetaCopy.textContent=old, 1500);
+    });
+  }
+  // 輸入時自動更新
+  document.getElementById("metaDesc")?.addEventListener("input", ()=>{
+    if(metaOut && metaOut.value) metaOut.value = buildMetaPrompt();
+  });
+
 }
 
 function updateGridHint(){
