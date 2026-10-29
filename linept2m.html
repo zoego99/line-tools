@@ -16,20 +16,20 @@
 <body>
 
 <header class="topbar">
-  <a class="nav-brand" href="#">
+  <a class="nav-brand" href="./index.html">
     <div class="nav-logo"><img src="./logo.svg" alt="" class="logo"/></div>
     <div class="nav-text">
-      <span class="nav-title">LINE 貼圖，利用網站進行裁切圖片</span>
+      <span class="nav-title">LINE 貼圖整理上架<span class="topbar-step">步驟 3</span></span>
       <span class="nav-sub">心怡｜zoego99@gmail.com</span>
     </div>
   </a>
   <div class="topbar-divider"></div>
   <span class="topbar-sub">上傳大圖 → 格線對位 → 去背 → 下載 ZIP</span>
-  <!-- <button class="menu-btn" id="menuBtn" type="button" aria-label="選單">☰</button>
+  <button class="menu-btn" id="menuBtn" type="button" aria-label="選單">☰</button>
   <div class="topbar-right" id="navMenu">
     <a class="nav-link" href="./index.html">回步驟1： Prompt 生成器</a>
     <a class="nav-link accent" href="https://creator.line.me/" target="_blank" rel="noreferrer">回步驟4：LINE Creators ↗</a>
-  </div> -->
+  </div>
 </header>
 
 <nav class="steps" id="steps">
@@ -47,8 +47,8 @@
       <div class="upload-zone" id="upZone">
         <div id="upEmpty"><div class="ico">🖼</div><div class="t">點這裡選擇大圖</div><div class="hint">支援相簿 / 檔案</div></div>
         <img id="upPreview" alt="" style="display:none"/>
+        <input id="fileBig" class="file-overlay" type="file" accept="image/*" aria-label="選擇大圖"/>
       </div>
-      <input id="fileBig" type="file" accept="image/*" style="display:none"/>
       <div class="notice" style="margin-top:10px">建議用 <b>綠幕背景（#00FF00）</b> 生圖，步驟 3 可自動偵測背景色去背。</div>
     </div>
     <div class="card">
@@ -220,9 +220,8 @@ $('btnPrev').onclick=()=>go(Math.max(0,S.step-1));
 $('btnNext').onclick=()=>S.step<3?go(S.step+1):downloadZip();
 
 /* ── 上傳 ── */
-$('upZone').onclick=()=>$('fileBig').click();
 $('fileBig').onchange=e=>{
-  const f=e.target.files[0];if(!f)return;
+  const f=e.target.files[0];e.target.value='';if(!f)return;
   const url=URL.createObjectURL(f);const img=new Image();
   img.onload=()=>{
     S.img=img;S.W=img.naturalWidth;S.H=img.naturalHeight;

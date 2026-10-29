@@ -70,12 +70,15 @@ main{padding:0 12px calc(var(--bar-h) + 24px)}
 .segbtn.is-on{background:#fff;border-color:var(--primary-bd);color:var(--primary);box-shadow:var(--shadow-sm)}
 
 /* ── 上傳區 ── */
-.upload-zone{border:2px dashed rgba(42,63,111,.3);border-radius:var(--radius);background:var(--primary-bg);
+.upload-zone{position:relative;overflow:hidden;border:2px dashed rgba(42,63,111,.3);border-radius:var(--radius);background:var(--primary-bg);
   padding:28px 14px;text-align:center;cursor:pointer;color:var(--primary)}
 .upload-zone .ico{font-size:40px}
 .upload-zone .t{font-weight:900;margin-top:6px}
 .upload-zone img{max-width:100%;max-height:220px;border-radius:8px;display:block;margin:0 auto;
   background:repeating-conic-gradient(rgba(0,0,0,.06) 0 25%,#fff 0 50%) 0 0/14px 14px}
+
+/* 透明檔案欄位蓋滿上傳區：手指直接點到 input，相容 LINE / FB 內建瀏覽器 */
+.file-overlay{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0;z-index:2}
 
 /* ── 表單 ── */
 .input{padding:12px;font-size:16px}  /* 16px 避免 iOS 自動放大 */
