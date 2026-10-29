@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#2A3F6F"/>
+<title>LINE 貼圖整理上架｜手機版</title>
+<link rel="icon" href="./logo2.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<link rel="stylesheet" href="./line.css"/>
+<link rel="stylesheet" href="./line2.css"/>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="nav-brand" href="#">
+    <div class="nav-logo"><img src="./logo.svg" alt="" class="logo"/></div>
+    <div class="nav-text">
+      <span class="nav-title">LINE 貼圖，利用網站進行裁切圖片</span>
+      <span class="nav-sub">心怡｜zoego99@gmail.com</span>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <span class="topbar-sub">上傳大圖 → 格線對位 → 去背 → 下載 ZIP</span>
+  <!-- <button class="menu-btn" id="menuBtn" type="button" aria-label="選單">☰</button>
+  <div class="topbar-right" id="navMenu">
+    <a class="nav-link" href="./index.html">回步驟1： Prompt 生成器</a>
+    <a class="nav-link accent" href="https://creator.line.me/" target="_blank" rel="noreferrer">回步驟4：LINE Creators ↗</a>
+  </div> -->
+</header>
+
+<nav class="steps" id="steps">
+  <button class="step-pill on" data-go="0" type="button"><b>1</b>上傳</button>
+  <button class="step-pill" data-go="1" type="button" disabled><b>2</b>對位</button>
+  <button class="step-pill" data-go="2" type="button" disabled><b>3</b>去背</button>
+  <button class="step-pill" data-go="3" type="button" disabled><b>4</b>下載</button>
+</nav>
+
+<main>
+  <!-- ══ 1 上傳 ══ -->
+  <section class="page on" data-page="0">
+    <div class="card">
+      <div class="card-title">📁 上傳大圖</div>
+      <div class="upload-zone" id="upZone">
+        <div id="upEmpty"><div class="ico">🖼</div><div class="t">點這裡選擇大圖</div><div class="hint">支援相簿 / 檔案</div></div>
+        <img id="upPreview" alt="" style="display:none"/>
+      </div>
+      <input id="fileBig" type="file" accept="image/*" style="display:none"/>
+      <div class="notice" style="margin-top:10px">建議用 <b>綠幕背景（#00FF00）</b> 生圖，步驟 3 可自動偵測背景色去背。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">✂ 切割規格</div>
+      <div class="seg" id="gridSeg">
+        <button class="segbtn is-on" data-grid="4" type="button">4×4（16張）</button>
+        <button class="segbtn" data-grid="5" type="button">5×5（25張）</button>
+        <button class="segbtn" data-grid="3" type="button">3×3（9張）</button>
+      </div>
+      <div class="hint" id="gridHint" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔢 命名 / 編號</div>
+      <label class="lbl" for="startNo">起始編號（第二組填 25）</label>
+      <input id="startNo" class="input" value="1" type="number" min="1" inputmode="numeric"/>
+    </div>
+  </section>
+
+  <!-- ══ 2 對位 ══ -->
+  <section class="page" data-page="1">
+    <div class="card">
+      <div class="card-title">📐 格線調整模式</div>
+      <div class="seg" id="modeSeg">
+        <button class="segbtn is-on" data-mode="global" type="button">⇔ 整欄整列</button>
+        <button class="segbtn" data-mode="cell" type="button">✏ 單格微調</button>
+      </div>
+      <div class="hint" id="modeHint" style="margin-top:8px"></div>
+    </div>
+    <div class="cv-wrap" id="cvWrap"><canvas id="dispCv"></canvas></div>
+    <div class="chips"><span class="chip" id="imgInfo">尚未上傳</span><span class="chip" id="selInfo">整欄整列</span></div>
+    <button class="btn block" id="btnReset" type="button">↩ 重置格線</button>
+  </section>
+
+  <!-- ══ 3 去背 ══ -->
+  <section class="page" data-page="2">
+    <div class="card">
+      <div class="card-title">🪄 去背選項</div>
+      <div class="row2">
+        <button class="btn is-on" id="btnBgYes" type="button">✅ 幫我去背</button>
+        <button class="btn" id="btnBgNo" type="button">⬜ 已去背</button>
+      </div>
+    </div>
+
+    <div id="bgAdvanced" style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="card-title">🎨 背景色</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="swatch" id="bgSwatch" style="background:#00ff00"></span>
+          <span id="bgColorTxt" style="font-size:13px;color:var(--muted);flex:1">rgb(0,255,0)</span>
+          <button class="btn" id="btnDetect" type="button" style="padding:9px 12px">🔍 重新偵測</button>
+        </div>
+        <div class="hint" style="margin-top:6px">自動偵測第 1 格四角背景色；也可<b>點下方預覽圖直接吸色</b>。</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👀 即時預覽（第 <span id="liveIdx">1</span> 張）</div>
+        <div class="live">
+          <button class="live-nav" id="btnPrevLive" type="button">‹</button>
+          <div class="checker"><canvas id="liveCv"></canvas></div>
+          <button class="live-nav" id="btnNextLive" type="button">›</button>
+        </div>
+        <details style="margin-top:10px">
+          <summary>⚙ 進階去背微調</summary>
+          <div class="range-row"><span>背景閾值</span><input id="rt" type="range" min="10" max="120" value="55"/><output id="vt">55</output></div>
+          <div class="hint">越大去背越強，數值高可解鋸齒</div>
+          <div class="range-row"><span>軟邊範圍</span><input id="rsoft" type="range" min="0" max="30" value="8"/><output id="vsoft">8</output></div>
+          <div class="hint">小＝銳利邊緣／大＝漸進透明</div>
+          <div class="range-row"><span>邊緣收縮</span><input id="rerode" type="range" min="0" max="3" value="1"/><output id="verode">1px</output></div>
+          <label class="chk"><input type="checkbox" id="chkDefringe" checked/>去色滲（消除邊緣背景色光暈）</label>
+          <label class="chk"><input type="checkbox" id="chkSpill" checked/>消除綠光／藍光殘影</label>
+          <label class="chk"><input type="checkbox" id="chkHollow"/>挖空內部背景（手臂與身體間空隙）</label>
+        </details>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧩 全部結果</div>
+      <div class="thumbs" id="thumbs3"></div>
+      <div class="hint" style="margin-top:8px">點縮圖可切換即時預覽；調整參數後下一步會自動套用到全部。</div>
+    </div>
+  </section>
+
+  <!-- ══ 4 下載 ══ -->
+  <section class="page" data-page="3">
+    <div class="card">
+      <div class="card-title">⭐ 指定 Main / Tab</div>
+      <div class="seg" id="assignSeg">
+        <button class="segbtn is-on" data-assign="main" type="button">★ 設為 Main</button>
+        <button class="segbtn" data-assign="tab" type="button">◈ 設為 Tab</button>
+      </div>
+      <div class="thumbs" id="thumbs4" style="margin-top:10px"></div>
+      <div class="mt" style="margin-top:12px">
+        <div class="mt-cell"><div class="mt-hd main-hd">★ Main 240×240</div><div class="checker"><canvas id="mainCv"></canvas></div></div>
+        <div class="mt-cell"><div class="mt-hd tab-hd">◈ Tab 96×74</div><div class="checker"><canvas id="tabCv"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⬇ 下載</div>
+      <button class="btn primary block" id="btnZip" type="button" style="padding:15px">⬇ 下載 ZIP</button>
+      <div class="hint" style="margin-top:6px" id="zipHint"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 上架資訊（複製後貼給 AI）</div>
+      <div class="hint" style="margin-bottom:8px">在同一個生圖對話中，AI 已了解你的貼圖內容，直接貼上詢問即可。</div>
+      <div class="prompt-box" id="promptBox"></div>
+      <button class="btn block" id="btnCopy" type="button" style="margin-top:8px">📋 複製文字</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🚀 LINE 上架</div>
+      <ol class="steps-list">
+        <li>建立商品（一般貼圖）</li><li>上傳 01.png…</li><li>main.png（封面）</li><li>tab.png（縮圖）</li><li>填標題 → 送審</li>
+      </ol>
+      <a class="btn block" href="https://creator.line.me/" target="_blank" rel="noreferrer" style="margin-top:10px">前往 LINE Creators ↗</a>
+    </div>
+    <footer><span id="yearTxt"></span> LINE Sticker Tool【Zoego】</footer>
+  </section>
+</main>
+
+<div class="bar">
+  <button class="btn" id="btnPrev" type="button">‹ 上一步</button>
+  <button class="btn primary" id="btnNext" type="button" disabled>下一步 ›</button>
+</div>
+<div class="toast" id="toast"></div>
+<div class="loading" id="loading">處理中…</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const OUT_W=370,OUT_H=320,PAD=10;
+
+const S={img:null,W:0,H:0,n:4,cells:[],mode:'global',sel:null,
+  sliced:[],trimmed:[],dirty:true,bgOn:true,bg:[0,255,0],
+  mainIdx:0,tabIdx:0,live:0,assign:'main',step:0,maxStep:0};
+
+/* ── 共用 ── */
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800)}
+const busy=on=>$('loading').classList.toggle('show',on);
+const tick=()=>new Promise(r=>setTimeout(r,30));
+function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+
+/* ── NAV 選單 ── */
+$('menuBtn').onclick=e=>{e.stopPropagation();$('navMenu').classList.toggle('open')};
+document.addEventListener('click',()=>$('navMenu').classList.remove('open'));
+
+/* ── 步驟切換 ── */
+const NEXT_TXT=['下一步：對位 ›','✂ 切割並去背 ›','下一步：下載 ›','⬇ 下載 ZIP'];
+async function go(i){
+  if(i===2 && S.step===1) await slice();
+  if(i===3 && S.dirty) await processAll();
+  S.step=i;S.maxStep=Math.max(S.maxStep,i);
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',+p.dataset.page===i));
+  document.querySelectorAll('.step-pill').forEach((p,k)=>{
+    p.classList.toggle('on',k===i);p.classList.toggle('done',k<S.maxStep&&k!==i);
+    p.disabled=!(k<=S.maxStep || (k===1&&S.img));
+  });
+  $('btnPrev').disabled=i===0;
+  $('btnNext').textContent=NEXT_TXT[i];
+  $('btnNext').disabled=!S.img;
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(i===1) requestAnimationFrame(draw);
+  if(i===2){renderThumbs('thumbs3');renderLive()}
+  if(i===3){renderThumbs('thumbs4');renderMT()}
+}
+document.querySelectorAll('.step-pill').forEach(p=>p.onclick=()=>go(+p.dataset.go));
+$('btnPrev').onclick=()=>go(Math.max(0,S.step-1));
+$('btnNext').onclick=()=>S.step<3?go(S.step+1):downloadZip();
+
+/* ── 上傳 ── */
+$('upZone').onclick=()=>$('fileBig').click();
+$('fileBig').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const url=URL.createObjectURL(f);const img=new Image();
+  img.onload=()=>{
+    S.img=img;S.W=img.naturalWidth;S.H=img.naturalHeight;
+    $('upPreview').src=url;$('upPreview').style.display='block';$('upEmpty').style.display='none';
+    $('imgInfo').textContent=`${S.W}×${S.H}px`;
+    initGrid();S.maxStep=0;S.dirty=true;go(0);toast('已載入大圖');
+  };img.src=url;
+};
+
+/* ── 規格 ── */
+const GRID_HINT={4:'16 張：剛好符合 LINE 16 張規格，可直接上架',5:'25 張：取前 24 張上架，或當作 8/16/24 張挑選',3:'9 張：取 8 張上架，剩 1 張可當 main/tab'};
+function gridHint(){$('gridHint').textContent=GRID_HINT[S.n]}
+$('gridSeg').onclick=e=>{const b=e.target.closest('.segbtn');if(!b)return;
+  S.n=+b.dataset.grid;[...$('gridSeg').children].forEach(x=>x.classList.toggle('is-on',x===b));
+  gridHint();if(S.img){initGrid();S.dirty=true}};
+gridHint();
+
+/* ── 格線資料 ── */
+function initGrid(){
+  const n=S.n,cw=S.W/n,ch=S.H/n;S.cells=[];S.sel=null;
+  for(let r=0;r<n;r++){S.cells[r]=[];for(let c=0;c<n;c++)
+    S.cells[r][c]={x0:c*cw,y0:r*ch,x1:(c+1)*cw,y1:(r+1)*ch}}
+  updSel();draw();
+}
+$('btnReset').onclick=()=>{initGrid();S.dirty=true;toast('格線已重置')};
+const vLine=i=>{let s=0;for(let r=0;r<S.n;r++)s+=i<S.n?S.cells[r][i].x0:S.cells[r][S.n-1].x1;return s/S.n};
+const hLine=i=>{let s=0;for(let c=0;c<S.n;c++)s+=i<S.n?S.cells[i][c].y0:S.cells[S.n-1][c].y1;return s/S.n};
+function setV(i,v){for(let r=0;r<S.n;r++){if(i<S.n)S.cells[r][i].x0=v;if(i>0)S.cells[r][i-1].x1=v}}
+function setH(i,v){for(let c=0;c<S.n;c++){if(i<S.n)S.cells[i][c].y0=v;if(i>0)S.cells[i-1][c].y1=v}}
+
+/* ── 模式 ── */
+const MODE_HINT={global:'用手指拖曳任一條格線，整欄／整列一起移動。',cell:'先點選要微調的格子，再拖曳出現的 4 個圓點；相鄰格會同步移動。'};
+$('modeSeg').onclick=e=>{const b=e.target.closest('.segbtn');if(!b)return;
+  S.mode=b.dataset.mode;[...$('modeSeg').children].forEach(x=>x.classList.toggle('is-on',x===b));
+  $('modeHint').textContent=MODE_HINT[S.mode];S.sel=null;updSel();draw()};
+$('modeHint').textContent=MODE_HINT.global;
+function updSel(){$('selInfo').textContent=S.mode==='global'?'整欄整列':(S.sel?`已選第 ${S.sel[0]*S.n+S.sel[1]+1} 格`:'未選取格子')}
+
+/* ── 畫布 ── */
+const cv=$('dispCv'),ctx=cv.getContext('2d');let scale=1;
+function draw(){
+  if(!S.img||S.step!==1)return;
+  const wrapW=$('cvWrap').clientWidth-16,maxH=window.innerHeight*0.6;
+  scale=Math.min(wrapW/S.W,maxH/S.H);
+  const cssW=S.W*scale,cssH=S.H*scale,dpr=window.devicePixelRatio||1;
+  cv.style.width=cssW+'px';cv.style.height=cssH+'px';cv.width=cssW*dpr;cv.height=cssH*dpr;
+  ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
+  ctx.drawImage(S.img,0,0);
+  const lw=1.5/scale,R=9/scale;
+  for(let r=0;r<S.n;r++)for(let c=0;c<S.n;c++){
+    const k=S.cells[r][c];ctx.strokeStyle='rgba(42,63,111,.95)';ctx.lineWidth=lw;
+    ctx.strokeRect(k.x0,k.y0,k.x1-k.x0,k.y1-k.y0);
+    ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(k.x0+2/scale,k.y0+2/scale,22/scale,15/scale);
+    ctx.fillStyle='#fff';ctx.font=`bold ${10/scale}px sans-serif`;ctx.fillText(r*S.n+c+1,k.x0+5/scale,k.y0+13/scale);
+  }
+  const dot=(x,y,col)=>{ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.fillStyle=col;ctx.fill();ctx.lineWidth=2.5/scale;ctx.strokeStyle='#fff';ctx.stroke()};
+  if(S.mode==='global'){
+    for(let i=0;i<=S.n;i++){dot(vLine(i),S.H/2,'#2A3F6F');dot(S.W/2,hLine(i),'#2A3F6F')}
+  }else if(S.sel){
+    const k=S.cells[S.sel[0]][S.sel[1]];
+    ctx.fillStyle='rgba(169,20,45,.15)';ctx.fillRect(k.x0,k.y0,k.x1-k.x0,k.y1-k.y0);
+    ctx.strokeStyle='#a9142d';ctx.lineWidth=3/scale;ctx.strokeRect(k.x0,k.y0,k.x1-k.x0,k.y1-k.y0);
+    const mx=(k.x0+k.x1)/2,my=(k.y0+k.y1)/2;
+    dot(k.x0,my,'#a9142d');dot(k.x1,my,'#a9142d');dot(mx,k.y0,'#a9142d');dot(mx,k.y1,'#a9142d');
+  }
+}
+window.addEventListener('resize',()=>requestAnimationFrame(draw));
+
+function pt(e){const b=cv.getBoundingClientRect();return[(e.clientX-b.left)/scale,(e.clientY-b.top)/scale]}
+let drag=null,downPt=null;const MIN=8;
+cv.addEventListener('pointerdown',e=>{
+  if(!S.img)return;const[x,y]=pt(e);downPt=[x,y];const tol=24/scale;drag=null;
+  if(S.mode==='global'){
+    let best=tol;
+    for(let i=0;i<=S.n;i++){
+      const dv=Math.abs(x-vLine(i));if(dv<best){best=dv;drag={t:'v',i}}
+      const dh=Math.abs(y-hLine(i));if(dh<best){best=dh;drag={t:'h',i}}
+    }
+  }else if(S.sel){
+    const k=S.cells[S.sel[0]][S.sel[1]],mx=(k.x0+k.x1)/2,my=(k.y0+k.y1)/2;
+    const hs=[['x0',k.x0,my],['x1',k.x1,my],['y0',mx,k.y0],['y1',mx,k.y1]];let best=tol*1.3;
+    hs.forEach(([ed,hx,hy])=>{const d=Math.hypot(x-hx,y-hy);if(d<best){best=d;drag={t:'e',ed}}});
+  }
+  if(drag)cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove',e=>{
+  if(!drag)return;const[x,y]=pt(e);
+  if(drag.t==='v'){const i=drag.i,lo=i>0?vLine(i-1)+MIN:0,hi=i<S.n?vLine(i+1)-MIN:S.W;
+    setV(i,Math.max(lo,Math.min(hi,x)));}
+  else if(drag.t==='h'){const i=drag.i,lo=i>0?hLine(i-1)+MIN:0,hi=i<S.n?hLine(i+1)-MIN:S.H;
+    setH(i,Math.max(lo,Math.min(hi,y)));}
+  else{
+    const[r,c]=S.sel,k=S.cells[r][c],ed=drag.ed;
+    if(ed==='x0'){const v=Math.max(c>0?S.cells[r][c-1].x0+MIN:0,Math.min(k.x1-MIN,x));k.x0=v;if(c>0)S.cells[r][c-1].x1=v}
+    if(ed==='x1'){const v=Math.min(c<S.n-1?S.cells[r][c+1].x1-MIN:S.W,Math.max(k.x0+MIN,x));k.x1=v;if(c<S.n-1)S.cells[r][c+1].x0=v}
+    if(ed==='y0'){const v=Math.max(r>0?S.cells[r-1][c].y0+MIN:0,Math.min(k.y1-MIN,y));k.y0=v;if(r>0)S.cells[r-1][c].y1=v}
+    if(ed==='y1'){const v=Math.min(r<S.n-1?S.cells[r+1][c].y1-MIN:S.H,Math.max(k.y0+MIN,y));k.y1=v;if(r<S.n-1)S.cells[r+1][c].y0=v}
+  }
+  S.dirty=true;draw();
+});
+cv.addEventListener('pointerup',e=>{
+  const[x,y]=pt(e);
+  if(!drag&&S.mode==='cell'&&downPt&&Math.hypot(x-downPt[0],y-downPt[1])<10/scale){
+    for(let r=0;r<S.n;r++)for(let c=0;c<S.n;c++){const k=S.cells[r][c];
+      if(x>=k.x0&&x<k.x1&&y>=k.y0&&y<k.y1)S.sel=[r,c]}
+    updSel();draw();
+  }
+  drag=null;downPt=null;
+});
+
+/* ── 切割 ── */
+async function slice(){
+  if(!S.dirty&&S.sliced.length)return;
+  busy(true);await tick();
+  S.sliced=[];
+  for(let r=0;r<S.n;r++)for(let c=0;c<S.n;c++){
+    const k=S.cells[r][c],x=Math.round(k.x0),y=Math.round(k.y0),w=Math.max(1,Math.round(k.x1)-x),h=Math.max(1,Math.round(k.y1)-y);
+    const t=mk(w,h);t.getContext('2d').drawImage(S.img,x,y,w,h,0,0,w,h);S.sliced.push(t);
+  }
+  S.live=0;S.mainIdx=Math.min(S.mainIdx,S.sliced.length-1);S.tabIdx=Math.min(S.tabIdx,S.sliced.length-1);
+  if(isTransparent(S.sliced[0])){setBgOn(false);toast('偵測到透明背景，已自動切換為「已去背」')}
+  else{setBgOn(true);detectBg()}
+  await processAll(true);
+  busy(false);
+}
+
+/* ── 透明背景偵測 ── */
+function isTransparent(c){
+  const w=c.width,h=c.height,d=c.getContext('2d').getImageData(0,0,w,h).data;
+  const sz=Math.max(2,Math.round(Math.min(w,h)*0.06));let n=0,t=0;
+  for(const[ox,oy]of[[0,0],[w-sz,0],[0,h-sz],[w-sz,h-sz]])
+    for(let y=oy;y<oy+sz;y++)for(let x=ox;x<ox+sz;x++){n++;if(d[(y*w+x)*4+3]<20)t++}
+  return t/n>0.5;
+}
+
+/* ── 背景色 ── */
+function setBg(rgb){S.bg=rgb;const s=`rgb(${rgb.join(',')})`;$('bgSwatch').style.background=s;$('bgColorTxt').textContent=s}
+function detectBg(){
+  const c=S.sliced[0];if(!c)return;const w=c.width,h=c.height,d=c.getContext('2d').getImageData(0,0,w,h).data;
+  const m=new Map(),sz=Math.max(2,Math.round(Math.min(w,h)*0.06));
+  for(const[ox,oy]of[[0,0],[w-sz,0],[0,h-sz],[w-sz,h-sz]])
+    for(let y=oy;y<oy+sz;y++)for(let x=ox;x<ox+sz;x++){
+      const i=(y*w+x)*4,key=(d[i]>>4)<<8|(d[i+1]>>4)<<4|(d[i+2]>>4);
+      const v=m.get(key)||{n:0,r:0,g:0,b:0};v.n++;v.r+=d[i];v.g+=d[i+1];v.b+=d[i+2];m.set(key,v)}
+  let best=null;m.forEach(v=>{if(!best||v.n>best.n)best=v});
+  setBg([best.r/best.n|0,best.g/best.n|0,best.b/best.n|0]);
+}
+$('btnDetect').onclick=()=>{detectBg();S.dirty=true;renderLive();toast('已重新偵測背景色')};
+
+/* ── 去背核心 ── */
+function P(){return{thr:+$('rt').value,soft:+$('rsoft').value,erode:+$('rerode').value,
+  defringe:$('chkDefringe').checked,spill:$('chkSpill').checked,hollow:$('chkHollow').checked}}
+function removeBg(src,p){
+  const w=src.width,h=src.height,out=mk(w,h),o=out.getContext('2d');o.drawImage(src,0,0);
+  if(!S.bgOn)return out;
+  const im=o.getImageData(0,0,w,h),d=im.data,N=w*h,[br,bgc,bb]=S.bg;
+  const dist=new Float32Array(N);
+  for(let i=0;i<N;i++){const j=i*4,dr=d[j]-br,dg=d[j+1]-bgc,db=d[j+2]-bb;dist[i]=Math.sqrt(dr*dr*.3+dg*dg*.59+db*db*.11)}
+  const lim=p.thr+p.soft,cand=new Uint8Array(N);
+  if(p.hollow){for(let i=0;i<N;i++)if(dist[i]<lim)cand[i]=1}
+  else{
+    const q=new Int32Array(N);let qh=0,qt=0;
+    const push=i=>{if(!cand[i]&&dist[i]<lim){cand[i]=1;q[qt++]=i}};
+    for(let x=0;x<w;x++){push(x);push((h-1)*w+x)}
+    for(let y=0;y<h;y++){push(y*w);push(y*w+w-1)}
+    while(qh<qt){const i=q[qh++],x=i%w,y=(i/w)|0;
+      if(x>0)push(i-1);if(x<w-1)push(i+1);if(y>0)push(i-w);if(y<h-1)push(i+w)}
+  }
+  let a=new Uint8Array(N);
+  for(let i=0;i<N;i++)a[i]=!cand[i]?255:(dist[i]<p.thr?0:(p.soft?Math.round((dist[i]-p.thr)/p.soft*255):255));
+  for(let k=0;k<p.erode;k++){const b=new Uint8Array(a);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(!a[i])continue;
+      let m=a[i];if(x>0)m=Math.min(m,a[i-1]);if(x<w-1)m=Math.min(m,a[i+1]);if(y>0)m=Math.min(m,a[i-w]);if(y<h-1)m=Math.min(m,a[i+w]);
+      b[i]=m===0?Math.min(a[i],90):a[i]}
+    a=b}
+  const mx=Math.max(br,bgc,bb),dom=bgc===mx?1:(bb===mx?2:0);
+  for(let i=0;i<N;i++){
+    const j=i*4,al=a[i];d[j+3]=al;if(!al)continue;
+    if(p.defringe&&al<255){const f=al/255;
+      for(let ch=0;ch<3;ch++){const bgv=S.bg[ch];d[j+ch]=Math.max(0,Math.min(255,(d[j+ch]-bgv*(1-f))/f))}}
+    if(p.spill&&(al<255||dist[i]<p.thr*2.5)&&dom!==0||(p.spill&&dom===0&&al<255)){
+      const o1=(dom+1)%3,o2=(dom+2)%3,cap=Math.max(d[j+o1],d[j+o2]);if(d[j+dom]>cap)d[j+dom]=cap}
+  }
+  o.putImageData(im,0,0);return out;
+}
+function trim(c){
+  const w=c.width,h=c.height,d=c.getContext('2d').getImageData(0,0,w,h).data;
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>8){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  if(x1<0)return c;const t=mk(x1-x0+1,y1-y0+1);t.getContext('2d').drawImage(c,-x0,-y0);return t;
+}
+function fit(src,W,H,pad){
+  const o=mk(W,H),g=o.getContext('2d'),s=Math.min((W-pad*2)/src.width,(H-pad*2)/src.height);
+  const w=src.width*s,h=src.height*s;g.imageSmoothingQuality='high';g.drawImage(src,(W-w)/2,(H-h)/2,w,h);return o;
+}
+async function processAll(skipBusy){
+  if(!S.sliced.length)return;
+  if(!skipBusy){busy(true);await tick()}
+  const p=P();S.trimmed=[];
+  for(let i=0;i<S.sliced.length;i++){S.trimmed.push(trim(removeBg(S.sliced[i],p)));if(i%5===4)await tick()}
+  S.dirty=false;
+  if(!skipBusy)busy(false);
+}
+
+/* ── 去背頁 UI ── */
+function setBgOn(on){S.bgOn=on;$('btnBgYes').classList.toggle('is-on',on);$('btnBgNo').classList.toggle('is-on',!on);
+  $('bgAdvanced').style.display=on?'flex':'none';S.dirty=true;renderLive();refreshThumbsLater()}
+$('btnBgYes').onclick=()=>setBgOn(true);$('btnBgNo').onclick=()=>setBgOn(false);
+
+let liveTimer,thumbTimer;
+function renderLive(){
+  clearTimeout(liveTimer);liveTimer=setTimeout(()=>{
+    const src=S.sliced[S.live];if(!src)return;
+    const t=trim(removeBg(src,P()));S.trimmed[S.live]=t;
+    const o=fit(t,OUT_W,OUT_H,PAD),lc=$('liveCv');lc.width=OUT_W;lc.height=OUT_H;lc.getContext('2d').drawImage(o,0,0);
+    $('liveIdx').textContent=S.live+1;
+  },60);
+}
+function refreshThumbsLater(){clearTimeout(thumbTimer);thumbTimer=setTimeout(async()=>{
+  if(S.step!==2)return;await processAll();renderThumbs('thumbs3')},700)}
+[['rt','vt',''],['rsoft','vsoft',''],['rerode','verode','px']].forEach(([r,v,u])=>{
+  $(r).addEventListener('input',()=>{$(v).textContent=$(r).value+u;S.dirty=true;renderLive()});
+  $(r).addEventListener('change',refreshThumbsLater)});
+['chkDefringe','chkSpill','chkHollow'].forEach(id=>$(id).onchange=()=>{S.dirty=true;renderLive();refreshThumbsLater()});
+$('btnPrevLive').onclick=()=>{S.live=(S.live-1+S.sliced.length)%S.sliced.length;renderLive()};
+$('btnNextLive').onclick=()=>{S.live=(S.live+1)%S.sliced.length;renderLive()};
+$('liveCv').addEventListener('click',e=>{
+  const src=S.sliced[S.live];if(!src)return;
+  const b=e.target.getBoundingClientRect(),sc=Math.min((OUT_W-PAD*2)/src.width,(OUT_H-PAD*2)/src.height);
+  // 以原始切片吸色
+  const t=S.trimmed[S.live]||src,ox=(OUT_W-t.width*sc)/2,oy=(OUT_H-t.height*sc)/2;
+  const px=(e.clientX-b.left)/b.width*OUT_W,py=(e.clientY-b.top)/b.height*OUT_H;
+  const tmp=mk(OUT_W,OUT_H),g=tmp.getContext('2d');g.drawImage(fit(src,OUT_W,OUT_H,PAD),0,0);
+  const d=g.getImageData(px|0,py|0,1,1).data;if(d[3]<10)return;
+  setBg([d[0],d[1],d[2]]);S.dirty=true;renderLive();refreshThumbsLater();toast('已吸取背景色');
+});
+
+/* ── 縮圖 ── */
+function renderThumbs(id){
+  const box=$(id);box.innerHTML='';box.style.gridTemplateColumns=`repeat(${S.n},1fr)`;
+  S.trimmed.forEach((t,i)=>{
+    const b=document.createElement('button');b.type='button';b.className='thumb';
+    if(i===S.mainIdx)b.classList.add('main');if(i===S.tabIdx)b.classList.add('tab');
+    const c=fit(t,OUT_W/2,OUT_H/2,4);b.appendChild(c);
+    b.insertAdjacentHTML('beforeend',`<span class="no">${String(+$('startNo').value+i).padStart(2,'0')}</span>`+
+      (i===S.mainIdx?'<span class="tag" style="background:var(--yellow)">★</span>':'')+
+      (i===S.tabIdx?`<span class="tag" style="background:var(--teal);${i===S.mainIdx?'right:20px':''}">◈</span>`:''));
+    b.onclick=()=>{
+      if(id==='thumbs3'){S.live=i;renderLive();document.querySelector('.live').scrollIntoView({behavior:'smooth',block:'center'})}
+      else{if(S.assign==='main')S.mainIdx=i;else S.tabIdx=i;renderThumbs('thumbs4');renderMT()}
+    };
+    box.appendChild(b);
+  });
+}
+$('assignSeg').onclick=e=>{const b=e.target.closest('.segbtn');if(!b)return;
+  S.assign=b.dataset.assign;[...$('assignSeg').children].forEach(x=>x.classList.toggle('is-on',x===b))};
+function renderMT(){
+  const m=fit(S.trimmed[S.mainIdx],240,240,6),t=fit(S.trimmed[S.tabIdx],96,74,2);
+  const mc=$('mainCv'),tc=$('tabCv');mc.width=240;mc.height=240;tc.width=96;tc.height=74;
+  mc.style.width='120px';tc.style.width='96px';
+  mc.getContext('2d').drawImage(m,0,0);tc.getContext('2d').drawImage(t,0,0);
+  const s=+$('startNo').value||1,last=s+S.trimmed.length-1,pad=v=>String(v).padStart(2,'0');
+  $('zipHint').textContent=`內容：${pad(s)}.png～${pad(last)}.png（${OUT_W}×${OUT_H}）＋ main.png（240×240）＋ tab.png（96×74）`;
+}
+
+/* ── ZIP ── */
+const toBlob=c=>new Promise(r=>c.toBlob(r,'image/png'));
+async function downloadZip(){
+  if(!S.trimmed.length)return;busy(true);await tick();
+  if(S.dirty)await processAll(true);
+  const zip=new JSZip(),s=+$('startNo').value||1;
+  for(let i=0;i<S.trimmed.length;i++)zip.file(String(s+i).padStart(2,'0')+'.png',await toBlob(fit(S.trimmed[i],OUT_W,OUT_H,PAD)));
+  zip.file('main.png',await toBlob(fit(S.trimmed[S.mainIdx],240,240,6)));
+  zip.file('tab.png',await toBlob(fit(S.trimmed[S.tabIdx],96,74,2)));
+  const blob=await zip.generateAsync({type:'blob'});busy(false);
+  saveAs(blob,`line_stickers_${String(s).padStart(2,'0')}.zip`);toast('ZIP 已產生');
+}
+$('btnZip').onclick=downloadZip;
+$('startNo').oninput=()=>{if(S.step===3){renderThumbs('thumbs4');renderMT()}};
+
+/* ── 上架資訊 ── */
+const yr=new Date().getFullYear();
+const PROMPT=`請協助提供這套 LINE 貼圖的上架資訊：
+・標題（英文）：40 字以內
+・標題（繁體中文）：40 字以內
+・說明（英文）：160 字以內，口語自然
+・說明（繁體中文）：160 字以內，口語自然
+・版權：© ${yr} [作者名]`;
+$('promptBox').textContent=PROMPT;
+$('btnCopy').onclick=async()=>{
+  try{await navigator.clipboard.writeText(PROMPT)}catch(e){
+    const t=document.createElement('textarea');t.value=PROMPT;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}
+  toast('已複製，貼給 AI 即可')};
+$('yearTxt').textContent='© '+yr;
+
+go(0);
+})();
+</script>
+</body>
+</html>
